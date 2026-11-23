@@ -40,19 +40,19 @@ PairShell 让求助方、协助方与协调服务各自处在清晰的安全边�
 
 ```mermaid
 sequenceDiagram
-    participant C as 客户设备
+    participant C as 求助方设备
     participant R as 协调/配对服务
-    participant M as 商家设备
+    participant M as 协助方设备
     C->>R: HTTPS 注册一次性配对码
     M->>R: HTTPS 认领配对并交换认证信令
     C-->>M: 通过独立渠道互相核对本次校验码
-    C->>C: 客户在本机检查权限并授权
+    C->>C: 求助方在本机检查权限并授权
     C->>M: 建立认证会话：优先直连，必要时经 TURN 中继
-    M->>C: 在 SSH 终端中交互；客户只读观看输出
-    Note over C,M: 终端和工具权限由客户本机授权控制
+    M->>C: 在 SSH 终端中交互；求助方只读观看输出
+    Note over C,M: 终端和工具权限由求助方本机授权控制
 ```
 
-配对服务只协助两端发现彼此和交换信令。会话由两端本次密钥认证，远程执行通道通过 Pion DataChannel 承载 SSH；网络条件允许时直连，无法直连时可使用 TURN。中继可以阻断连接并观察连接元数据，但不能代替客户本机授权。详见[配对流程](docs/PAIRCODE.md)和[传输设计](docs/transport.md)。
+配对服务只协助两端发现彼此和交换信令。会话由两端本次密钥认证，远程执行通道通过 Pion DataChannel 承载 SSH；网络条件允许时直连，无法直连时可使用 TURN。中继可以阻断连接并观察连接元数据，但不能代替求助方本机授权。详见[配对流程](docs/PAIRCODE.md)和[传输设计](docs/transport.md)。
 
 ## 快速开始
 
