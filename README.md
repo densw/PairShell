@@ -14,6 +14,8 @@ PairShell 让客户、协助人员与协调服务各自处在清晰的安全边�
   <a href="docs/deployment.md">Self-hosted</a>
 </p>
 
+🌐 官网：[pairshell.top](https://pairshell.top)（正在建设中）
+
 官方公网协调服务目前尚未开放；首次连接前，请按[部署说明](docs/deployment.md)自建服务，并在双方客户端填写同一个服务地址。Linux CLI 和全部发布附件见 [v1.1.1 Release](https://github.com/densw/PairShell/releases/tag/v1.1.1)。
 
 ## 产品演示
