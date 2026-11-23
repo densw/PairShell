@@ -12,11 +12,11 @@
 
 终端、命令任务、文件读写与 AI（MCP）默认选中，直接在授权页显示，不再需要共享目录或多层权限弹窗。客户核对身份后允许一次，工具按远程当前账号的系统权限操作真实路径；暂停、结束撤权和审计保留，不自动提权。
 
-- Windows 独立安装向导：[客户端 EXE](bin/release-1.1.1-official/PairShell-1.1.1-Windows-x64-Customer-Setup.exe)／[商家端 EXE](bin/release-1.1.1-official/PairShell-1.1.1-Windows-x64-Merchant-Setup.exe)。可同时安装，各自卸载；选择 `D:\` 自动补齐 `PairShell`，程序分别放入 `Customer`／`Merchant` 子目录。卸载保留配置及历史。
-- [Windows 便携 ZIP](bin/release-1.1.1-official/PairShell-1.1.1-Windows-x64.zip)：根目录两个角色入口、使用说明，组件集中在 `runtime`。
-- [macOS 通用 ZIP](bin/release-1.1.1-official/PairShell-1.1.1-macOS-universal.zip)：一个 PairShell.app，首页切换角色，兼容 Apple Silicon 和 Intel；ad-hoc 签名，尚未 Apple 公证。
-- Linux [amd64](bin/release-1.1.1-official/PairShell-1.1.1-Linux-amd64.tar.gz)／[arm64](bin/release-1.1.1-official/PairShell-1.1.1-Linux-arm64.tar.gz) CLI 与服务端包。
-- [发布签名验证](docs/release-signing.md) · [SHA-256 清单](bin/release-1.1.1-official/SHA256SUMS.txt) · [分离签名](bin/release-1.1.1-official/SHA256SUMS.txt.sig)。原生启动及安装卸载真机测试仍待完成。[包验证记录](bin/release-1.1.1-official/verification.json)
+- Windows 独立安装向导：[客户端 EXE](https://github.com/densw/PairShell/releases/download/v1.1.1/PairShell-1.1.1-Windows-x64-Customer-Setup.exe)／[商家端 EXE](https://github.com/densw/PairShell/releases/download/v1.1.1/PairShell-1.1.1-Windows-x64-Merchant-Setup.exe)。可同时安装，各自卸载；选择 `D:\` 自动补齐 `PairShell`，程序分别放入 `Customer`／`Merchant` 子目录。卸载保留配置及历史。
+- [Windows 便携 ZIP](https://github.com/densw/PairShell/releases/download/v1.1.1/PairShell-1.1.1-Windows-x64.zip)：根目录两个角色入口、使用说明，组件集中在 `runtime`。
+- [macOS 通用 ZIP](https://github.com/densw/PairShell/releases/download/v1.1.1/PairShell-1.1.1-macOS-universal.zip)：一个 PairShell.app，首页切换角色，兼容 Apple Silicon 和 Intel；ad-hoc 签名，尚未 Apple 公证。
+- Linux [amd64](https://github.com/densw/PairShell/releases/download/v1.1.1/PairShell-1.1.1-Linux-amd64.tar.gz)／[arm64](https://github.com/densw/PairShell/releases/download/v1.1.1/PairShell-1.1.1-Linux-arm64.tar.gz) CLI 与服务端包。
+- [发布签名验证](docs/release-signing.md) · [SHA-256 清单](https://github.com/densw/PairShell/releases/download/v1.1.1/SHA256SUMS.txt) · [分离签名](https://github.com/densw/PairShell/releases/download/v1.1.1/SHA256SUMS.txt.sig)。原生启动及安装卸载真机测试仍待完成。[包验证记录](https://github.com/densw/PairShell/releases/download/v1.1.1/verification.json)
 
 操作记录改为滚动查看，历史记录支持搜索、手动备注、标题／备注编辑和回收站恢复；原始审计日志保持只读。官方默认通道为 `https://relay.pairshell.top`。目前公网入口尚未开通。现有自定义地址优先，强制自定义模式不使用官方候选。
 
