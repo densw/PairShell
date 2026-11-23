@@ -7,16 +7,15 @@ PairShell 让客户、协助人员与协调服务各自处在清晰的安全边�
 > PairShell 使用客户当前系统账号的权限。请只授权你信任的协助人员；如果以管理员身份运行，远程协助也会拥有相应权限。
 
 <p align="center">
-  <a href="https://github.com/densw/PairShell/releases/download/v1.1.1/PairShell-1.1.1-Windows-x64-Customer-Setup.exe">Windows 客户端</a> ·
-  <a href="https://github.com/densw/PairShell/releases/download/v1.1.1/PairShell-1.1.1-Windows-x64-Merchant-Setup.exe">Windows 商家端</a> ·
-  <a href="https://github.com/densw/PairShell/releases/download/v1.1.1/PairShell-1.1.1-Windows-x64.zip">Windows 便携版</a> ·
-  <a href="https://github.com/densw/PairShell/releases/download/v1.1.1/PairShell-1.1.1-macOS-universal.zip">macOS 通用版</a> ·
+  <a href="https://github.com/densw/PairShell/releases/download/v1.1.2/PairShell-1.1.2-Windows-x64-Customer-Setup.exe">Windows 客户端</a> ·
+  <a href="https://github.com/densw/PairShell/releases/download/v1.1.2/PairShell-1.1.2-Windows-x64-Merchant-Setup.exe">Windows 商家端</a> ·
+  <a href="https://github.com/densw/PairShell/releases/download/v1.1.2/PairShell-1.1.2-macOS-universal.dmg">macOS 通用版 DMG</a> ·
   <a href="docs/deployment.md">Self-hosted</a>
 </p>
 
 🌐 官网：[pairshell.top](https://pairshell.top)（正在建设中）
 
-官方公网协调服务目前尚未开放；首次连接前，请按[部署说明](docs/deployment.md)自建服务，并在双方客户端填写同一个服务地址。Linux CLI 和全部发布附件见 [v1.1.1 Release](https://github.com/densw/PairShell/releases/tag/v1.1.1)。
+本次 v1.1.2 更新 Windows 和 macOS 客户端安装包，不更新协调服务。既有服务无需升级；Linux CLI 与服务端包继续使用 [v1.1.1 Release](https://github.com/densw/PairShell/releases/tag/v1.1.1)。自建服务入口和网络要求见[部署说明](docs/deployment.md)。
 
 ## 产品演示
 
@@ -59,7 +58,7 @@ sequenceDiagram
 
 ## 快速开始
 
-1. 从 [v1.1.1 Release](https://github.com/densw/PairShell/releases/tag/v1.1.1) 下载对应系统的包。Windows 可分别安装客户端和商家端；macOS 使用 universal ZIP。macOS 包为 ad-hoc 签名，尚未 Apple 公证。
+1. 从 [v1.1.2 Release](https://github.com/densw/PairShell/releases/tag/v1.1.2) 下载 Windows 客户端／商家端安装包或 macOS Universal DMG。Linux CLI 与服务端继续使用 [v1.1.1 Release](https://github.com/densw/PairShell/releases/tag/v1.1.1)。
 2. 按[部署说明](docs/deployment.md)运行协调服务；双方在 PairShell 的连接设置中填写同一 HTTPS 服务地址。
 3. 客户打开客户端生成一次性配对码，商家输入该码。双方通过已有可信渠道互相读出并核对完整校验码。
 4. 客户确认协助人员身份、检查权限并授权。连接后客户可只读观看商家的终端操作，并随时暂停或结束会话。
@@ -80,7 +79,7 @@ PairShell 的三方分别是**客户、协助人员和协调服务运营者**。
 
 审计记录保存在本机，可执行校验与回放；客户端尚未完成周期性远端见证闭环。安装包附有 SHA-256 清单和分离签名。验证前应通过独立渠道确认发布公钥或其指纹，不能只信任同一 Release 中随包下载的公钥。详细威胁模型见[三方安全协助说明](docs/trust.md)，签名步骤见[发布验证说明](docs/release-signing.md)。
 
-**项目仍处于开发阶段，协议尚未通过独立安全审查。** v1.1.1 的原生启动、安装卸载和公证等验收缺口见[发布验证记录](https://github.com/densw/PairShell/releases/download/v1.1.1/verification.json)及[实施台账](docs/IMPLEMENTATION.md)。
+**项目仍处于开发阶段，协议尚未通过独立安全审查。** v1.1.2 尚未完成真实 Windows 安装／卸载和 macOS 真机启动／Gatekeeper 验收；Windows 安装器没有 Authenticode 签名，macOS App 使用 ad-hoc 签名且未公证。详情见[1.1.2 发布说明](docs/RELEASE-1.1.2.md)及[实施台账](docs/IMPLEMENTATION.md)。
 
 ## 部署说明
 

@@ -5,18 +5,18 @@ import (
 	"testing"
 )
 
-func TestCompactCodeAndLegacyParsing(t *testing.T) {
+func TestCompactCodeOnlyAndClipboardFormatting(t *testing.T) {
 	for _, tc := range []struct{ code, locator, secret string }{
 		{"1234-5678-9012", "123456", "789012"},
 		{"123456789012", "123456", "789012"},
-		{"123456-1234-5678", "123456", "12345678"},
+		{"\u200e１２３４–５６７８–９０１２\u200f", "123456", "789012"},
 	} {
 		locator, secret, err := parse(tc.code)
 		if err != nil || locator != tc.locator || secret != tc.secret {
 			t.Fatalf("parse failed for length %d", len(tc.code))
 		}
 	}
-	for _, code := range []string{"12345678901", "1234567890123", "123456789012345", "123456ABCDEF"} {
+	for _, code := range []string{"12345678901", "1234567890123", "12345678901234", "123456-1234-5678", "123456789012345", "123456ABCDEF"} {
 		if _, _, err := parse(code); err == nil {
 			t.Fatal("invalid compact code accepted")
 		}

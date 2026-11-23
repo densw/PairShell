@@ -16,7 +16,7 @@ async function scenario(fail=false){
  vm.runInContext(fs.readFileSync('internal/uiassets/history.js','utf8'),context);
  // List entry selection uses the generated button, so capture it through appendChild.
  let button;el('list').appendChild=b=>{button=b};
- await el('open').onclick();await button.onclick();await tick();
+ await el('open').onclick();assert.equal(el('detail').hidden,true,'no selection must show an empty-state prompt');assert.equal(el('placeholder').hidden,false);await button.onclick();assert.equal(el('detail').hidden,false);await tick();
  if(fail){assert.equal(eventCalls,1,'read failure must stop automatic retries');assert.match(el('message').textContent,/read failed/);return}
  assert.equal(eventCalls,3,'short byte-limited responses must not end scrolling early');
  assert.match(el('events').textContent,/first large result/);assert.match(el('events').textContent,/second result/);

@@ -3,14 +3,23 @@ using System.IO;
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Reflection;
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.1.2.0")]
+[assembly: AssemblyFileVersion("1.1.2.0")]
 internal static class RoleLauncher {
+ internal static string DefaultFlags() {
+#if MERCHANT_DEFAULT
+  return "--merchant";
+#elif CUSTOMER_DEFAULT
+  return "--customer";
+#else
+  string name=Path.GetFileNameWithoutExtension(Application.ExecutablePath);
+  return name.IndexOf("Merchant",StringComparison.OrdinalIgnoreCase)>=0?"--merchant":"--customer";
+#endif
+ }
  [STAThread] static void Main(string[] args) {
   string root=AppDomain.CurrentDomain.BaseDirectory;
   string core=Path.Combine(root,"runtime","PairShell.exe");
-  string name=Path.GetFileNameWithoutExtension(Application.ExecutablePath);
-  string flags=name.IndexOf("Merchant",StringComparison.OrdinalIgnoreCase)>=0?"--merchant":"--customer";
+  string flags=DefaultFlags();
   foreach(string arg in args)if(arg=="--smoke-test"||arg=="--layout-test")flags+=" "+arg;
   try {
    if(!File.Exists(core))throw new FileNotFoundException();

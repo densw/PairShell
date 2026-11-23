@@ -10,6 +10,7 @@ import (
 	"os"
 	"pairshell/internal/audit"
 	"pairshell/internal/config"
+	"pairshell/internal/paircode"
 	"pairshell/internal/pairing"
 	"pairshell/internal/remote"
 	"pairshell/internal/transport"
@@ -310,7 +311,7 @@ func (m *merchantWindow) connectCodeAttempt(a *merchantAttempt, code string) {
 		}
 	}
 	if e != nil {
-		m.finishAttempt(a, "配对未完成，请获取新的配对码后重试", "error")
+		m.finishAttempt(a, paircode.Explain(e), "error")
 		return
 	}
 	m.connectAttemptSession(a, c)

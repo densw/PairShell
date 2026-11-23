@@ -44,12 +44,15 @@ function renderJourney() {
     $('#'+id).dataset.state=stage==='active'?'done':step>=0?(index<step?'done':index===step?'current':'waiting'):'waiting';
   }
   if(stage==='opening')$('#session-hint').textContent='正在准备远端 Shell。终端就绪后会自动进入，你现在仍可取消。';
-  if(stage==='verification')$('#session-hint').textContent='通过已有的聊天或电话联系客户，在侧栏输入对方设备上的校验码。';
+  if(stage==='verification')$('#session-hint').textContent='与客户核对左侧校验码。一致就继续，不一致就取消连接。';
   if(stage==='terminal_closed')$('#session-hint').textContent='终端已关闭。连接可用时可重新打开终端，或结束并重新配对。';
 }
 function focusConnection(clear) {
   if(clear)$('#pair-code').value='';
   setConnectionPane(true);renderCodeSlots();$('#pair-code').focus?.();
+}
+function compactPairCode(value) {
+ return value.replace(/[０-９]/g,char=>String.fromCharCode(char.charCodeAt(0)-65248)).replace(/[-\s\u2010-\u2015\u2212\uFE63\uFF0D\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/g,'');
 }
 function renderCodeSlots() {
   const input=$('#pair-code'), digits=input.value.replace(/[^0-9]/g,'');
@@ -59,10 +62,10 @@ function renderCodeSlots() {
 }
 $('#pair-code').oninput=()=>{
   const input=$('#pair-code');
-  const value=input.value.replace(/[０-９]/g,char=>String.fromCharCode(char.charCodeAt(0)-65248)).replace(/[-\s]/g,'');
+  const value=compactPairCode(input.value);
   input.value=value;
-  const invalid=/[^0-9]/.test(value)||value.length>14;
-  input.ariaInvalid=String(invalid);$('#merchant-error').textContent=invalid?'请输入 12 位配对码；也支持旧版 14 位码':'';
+  const invalid=/[^0-9]/.test(value)||value.length>12;
+  input.ariaInvalid=String(invalid);$('#merchant-error').textContent=invalid?'仅支持 12 位数字；请检查是否混入非数字内容':'';
   renderCodeSlots();
 };
 $('#pair-code').onkeyup=renderCodeSlots;
@@ -142,14 +145,14 @@ function openTerminal() {
 }
 async function call(path,body){const r=await fetch('/merchant/'+path,{method:'POST',headers:{'X-PairShell':key,'Content-Type':'application/json'},body:JSON.stringify(body||{})});if(!r.ok)throw Error(await r.text());return r.json();}
 const phaseLabel={idle:'等待连接',pairing:'正在配对',awaiting_consent:'等待对方授权',active:'已连接',ending:'正在结束',ended:'连接已结束',error:'连接未完成'};
-const verificationInput = $('#merchant-verification-input');
+let displayedVerification = '';
 function refreshConfirmButton() {
-  $('#confirm').disabled = !needsVerification || actionPending || !/^[a-f0-9]{24}$/i.test((verificationInput.value || '').trim());
+  $('#confirm').disabled = !needsVerification || actionPending || !displayedVerification;
 }
 async function refresh(){
   const r=await fetch('/merchant/state',{headers:{'X-PairShell':key}});if(!r.ok)throw Error('窗口认证失效，请重新打开客户端');const s=await r.json();
   const attempt=Number(s.AttemptID||0);if(currentAttempt!==null&&attempt<currentAttempt)return;
-  if(currentAttempt!==attempt){closeTerminal();currentAttempt=attempt;terminalStarted=false;focusedAttempt=null;needsVerification=false;verificationInput.value='';setConnectionPane(true);$('#reopen-terminal').hidden=true;term.reset();term.writeln('PairShell 远程终端\r\n等待连接和客户授权…');}
+  if(currentAttempt!==attempt){closeTerminal();currentAttempt=attempt;terminalStarted=false;focusedAttempt=null;needsVerification=false;displayedVerification='';setConnectionPane(true);$('#reopen-terminal').hidden=true;term.reset();term.writeln('PairShell 远程终端\r\n等待连接和客户授权…');}
   const previousPhase=phase;
   phase=s.Phase||({已连接:'active',已结束:'ended'})[s.State]||(s.State?'pairing':'idle');
   if(phase==='ended'&&previousPhase!=='ended')$('#pair-code').value='';
@@ -169,29 +172,33 @@ async function refresh(){
   for(const id of ['server','credential','save-settings'])$('#'+id).disabled=!canConnect||actionPending;
   $('#invitation').value=s.Invite||'';$('#remote-system').textContent=s.System||'目标系统待确认';
   $('#adapter').textContent=s.Reference?'pairshell mcp --session "'+s.Reference+'"':'连接后自动生成本机会话引用';
-  const verifyNow=s.State==='等待商家核对身份',showVerification=verifyNow&&!needsVerification;needsVerification=verifyNow;
-  $('#peer-code').textContent=s.Code||'';
-  $('#verify-section').hidden=phase!=='awaiting_consent'||!s.Code;
+  const awaitingConsent=phase==='awaiting_consent';
+  $('#connect-section').hidden=awaitingConsent;
+  const verifyNow=awaitingConsent&&s.State==='等待商家核对身份',showVerification=verifyNow&&!needsVerification;needsVerification=verifyNow;
+  if(verifyNow){
+    $('#merchant-state').textContent='等待核对校验码';
+    if(!actionPending)$('#connect').textContent='请先核对校验码';
+  }
+  displayedVerification=awaitingConsent&&/^[a-f0-9]{24}$/i.test(s.Code||'')?s.Code:'';
+  $('#peer-code').textContent=displayedVerification?displayedVerification.match(/.{6}/g).join(' '):'等待校验码';
+  $('#verify-section').hidden=!verifyNow&&!displayedVerification;
   $('#verify-form').hidden=!verifyNow;
   refreshConfirmButton();
-  if(showVerification){setConnectionPane(true);$('#invite-options').open=false;$('#settings').open=false;$('#verify-section').scrollIntoView?.({block:'nearest'});verificationInput.focus?.();}
+  if(showVerification){setConnectionPane(true);$('#invite-options').open=false;$('#settings').open=false;$('#verify-section').scrollIntoView?.({block:'nearest'});}
   renderRoute(s.Route||{});
   if(phase==='error')$('#merchant-error').textContent=s.Error||s.State||'配对未完成。请核对配对码后重试。';
   if(phase==='active')openTerminal();else{closeTerminal();$('#reopen-terminal').hidden=true;$('#terminal-status').textContent=phase==='ended'?'终端已关闭':'连接后自动打开终端';}
   renderJourney();
 }
 async function action(fn){if(actionPending)return;actionPending=true;$('#connect').disabled=true;$('#create').disabled=true;$('#connect').textContent='正在处理…';try{$('#merchant-error').textContent='';await fn()}catch(e){$('#merchant-error').textContent=e.message}finally{actionPending=false;await refresh().catch(()=>{});}}
-$('#connect-form').onsubmit=event=>{event.preventDefault();if(!canConnect||actionPending)return;return action(async()=>{const code=$('#pair-code').value.trim();const valid=/^(?:\d{12}|\d{14})$/.test(code.replace(/[-\s]/g,''));$('#pair-code').ariaInvalid=String(!valid);if(!valid){$('#pair-code').focus?.();throw Error('请输入完整的 12 位配对码')}await call('join',{Code:code});});};
+$('#connect-form').onsubmit=event=>{event.preventDefault();if(!canConnect||actionPending)return;return action(async()=>{const code=compactPairCode($('#pair-code').value);$('#pair-code').value=code;const valid=/^\d{12}$/.test(code);$('#pair-code').ariaInvalid=String(!valid);if(!valid){$('#pair-code').focus?.();throw Error('请输入完整的 12 位配对码')}await call('join',{Code:code});});};
 $('#create').onclick=()=>{if(canConnect)action(async()=>{await call('create',{Token:$('#credential').value});$('#credential').value='';});};
-verificationInput.oninput=refreshConfirmButton;
-$('#verify-form').onsubmit=event=>{
-  event.preventDefault();
+$('#confirm').onclick=()=>{
   if ($('#confirm').disabled) return;
-  const entered = verificationInput.value.trim();
+  const confirmation = {attempt_id:currentAttempt, verification_code:displayedVerification};
   return action(async ()=>{
     refreshConfirmButton();
-    await call('confirm', {attempt_id:currentAttempt, verification_code:entered});
-    verificationInput.value='';
+    await call('confirm', confirmation);
   });
 };
 $('#end').onclick=()=>{if(canEnd)action(async()=>{closeTerminal();await call('end');});};

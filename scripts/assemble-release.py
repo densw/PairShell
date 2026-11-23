@@ -13,7 +13,7 @@ from release_signing import MANIFEST, sha256_file as sha, sign_release
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--version', default='1.1.0')
+    p.add_argument('--version', default='1.1.2')
     p.add_argument('--signing-key', type=Path)
     p.add_argument('--signing-public-key', type=Path)
     args = p.parse_args()
@@ -24,7 +24,7 @@ def main():
     release=binary/('release-'+v)
     assert not release.exists(), 'Release output already exists'
     windows=binary/f'PairShell-{v}-Windows-x64'
-    assert {f.name for f in windows.iterdir()}=={'PairShell.Customer.exe','PairShell.Merchant.exe','使用说明.txt','runtime'}
+    assert {f.name for f in windows.iterdir()}=={'PairShell.Customer.exe','PairShell.Merchant.exe','Uninstall.exe','使用说明.txt','runtime'}
     assert sha(windows/'runtime/PairShellBackend.exe')==sha(binary/'pairshell-windows-amd64.exe')
     for role in ['Customer','Merchant']:
         installer=binary/f'PairShell-{v}-Windows-x64-{role}-Setup.exe'
@@ -44,9 +44,18 @@ def main():
                     assert count==2
                     assert {struct.unpack_from('>I',data,8+20*i)[0] for i in range(count)}=={0x01000007,0x0100000c}
                     assert z.getinfo(path).external_attr>>16&0o111==0o111
+    dmg=binary/f'PairShell-{v}-macOS-universal.dmg'
+    with dmg.open('rb') as f:
+        f.seek(-512,2)
+        assert f.read(4)==b'koly', 'Mac distribution must be a real UDIF DMG'
     release.mkdir()
-    for suffix in ['Windows-x64.zip','Windows-x64-Customer-Setup.exe','Windows-x64-Merchant-Setup.exe','macOS-universal.zip']:
+    for suffix in ['Windows-x64.zip','Windows-x64-Customer-Setup.exe','Windows-x64-Merchant-Setup.exe','macOS-universal.dmg']:
         shutil.copyfile(binary/f'PairShell-{v}-{suffix}',release/f'PairShell-{v}-{suffix}')
+    for role in ['Customer','Merchant']:
+        destination=release/f'Windows-{role}'
+        destination.mkdir()
+        shutil.copyfile(binary/f'PairShell-{v}-Windows-x64-{role}-Setup.exe',destination/'PairShell-Setup.exe')
+        (destination/MANIFEST).write_text(sha(destination/'PairShell-Setup.exe')+'  PairShell-Setup.exe\n',encoding='utf-8')
     shutil.copytree(windows,release/windows.name)
     for arch in ['amd64','arm64']:
         output=release/f'PairShell-{v}-Linux-{arch}.tar.gz'
@@ -57,7 +66,7 @@ def main():
         with tarfile.open(output) as tar:
             assert tar.extractfile('pairshell').read()==files['pairshell']
             assert tar.extractfile('pairshelld').read()==files['pairshelld']
-    report={'version':v,'checks':{'zip_crc':True,'windows_shared_backend_matches_build':True,'windows_root_files':3,'mac_app_count':1,'mac_architectures':['x86_64','arm64'],'mac_executable_bits':True,'linux_archive_contents':True},'not_verified':['Windows native GUI startup (previous automatic approval rejection)','Windows install/uninstall execution','macOS native startup, Gatekeeper and migration to a second Mac','Apple Developer ID notarization','Live official-server fallback (official service unavailable)']}
+    report={'version':v,'checks':{'zip_crc':True,'windows_shared_backend_matches_build':True,'windows_root_files':4,'mac_app_count':1,'mac_distribution':'UDIF DMG','mac_architectures':['x86_64','arm64'],'mac_executable_bits':True,'linux_archive_contents':True},'not_verified':['Windows install/uninstall execution','macOS native startup, DMG mounting, Gatekeeper and migration to a second Mac','Apple Developer ID notarization','Live remote session end-to-end acceptance for this release']}
     (release/'verification.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     (release/MANIFEST).write_text(''.join(sha(f)+'  '+f.name+'\n' for f in sorted(release.iterdir()) if f.is_file()),encoding='utf-8')
     if args.signing_key is not None:

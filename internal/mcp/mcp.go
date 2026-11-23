@@ -129,7 +129,7 @@ func Run(ctx context.Context, referencePath string) error {
 	if e != nil {
 		return e
 	}
-	s := sdk.NewServer(&sdk.Implementation{Name: "pairshell", Version: "1.1.0"}, nil)
+	s := sdk.NewServer(&sdk.Implementation{Name: "pairshell", Version: "1.1.2"}, nil)
 	add[Empty](s, b, "session_info", "Inspect this session's target, consent, connection and audit status", nil)
 	add[TaskStart](s, b, "task_start", "Run on the remote machine using its account and environment. Omit shell to use the remote default shell. cwd may be an absolute remote directory; relative cwd uses session_info.working_directory. Never automatically retry after disconnect", nil)
 	add[TaskID](s, b, "task_status", "Query an existing task's status", nil)

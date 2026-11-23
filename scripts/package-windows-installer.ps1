@@ -1,4 +1,4 @@
-param([string]$Version='1.1.0',[ValidateSet('Customer','Merchant','Both')][string]$Role='Both')
+param([string]$Version='1.1.2',[ValidateSet('Customer','Merchant','Both')][string]$Role='Both')
 $ErrorActionPreference='Stop'
 if($Version -notmatch '^\d+\.\d+\.\d+$'){throw 'Invalid version'}
 $repo=Split-Path $PSScriptRoot -Parent
@@ -11,9 +11,15 @@ foreach($currentRole in $roles){
  $stage=Join-Path $repo ('.tools/installer-'+$currentRole+'-'+[guid]::NewGuid().ToString('N'))
  $package=Join-Path $stage 'payload'
  New-Item -ItemType Directory -Force -Path $package | Out-Null
- Copy-Item -LiteralPath (Join-Path $source 'runtime') -Destination $package -Recurse
- Copy-Item -LiteralPath (Join-Path $source "PairShell.$currentRole.exe") -Destination $package
- @("PairShell $Version $label",'应用内可切换发起协助／接受协助。','默认使用官方通道 https://relay.pairshell.top；可在设置中填写自定义服务器。','保留 runtime 子目录；配置与历史保存在当前用户目录，卸载时保留。','安装目录内运行 Uninstall.exe，或从 Windows 应用列表卸载本角色。') | Set-Content -LiteralPath (Join-Path $package '使用说明.txt') -Encoding utf8
+ $roleRuntime=Join-Path $package 'runtime'
+ New-Item -ItemType Directory -Path $roleRuntime | Out-Null
+ Get-ChildItem -LiteralPath (Join-Path $source 'runtime') -Force | Where-Object Name -ne '.pairshell-portable' | ForEach-Object {Copy-Item -LiteralPath $_.FullName -Destination $roleRuntime -Recurse}
+ $launcherCompiler=Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+ $defaultRole=if($currentRole -eq 'Customer'){'CUSTOMER_DEFAULT'}else{'MERCHANT_DEFAULT'}
+ & $launcherCompiler /nologo /target:winexe /reference:System.Windows.Forms.dll ("/define:"+$defaultRole) ("/win32icon:"+(Join-Path $repo 'assets/brand/pairshell.ico')) ("/out:"+(Join-Path $package 'PairShell.exe')) (Join-Path $repo 'native/windows/Launcher.cs')
+ if($LASTEXITCODE -ne 0){throw 'Default-role launcher compilation failed'}
+ $action=if($currentRole -eq 'Customer'){'接受协助'}else{'发起协助'}
+ @("PairShell $Version",("默认启动："+$action+'。应用内可切换发起协助／接受协助。'),'默认使用官方通道 https://relay.pairshell.top；可在设置中填写自定义服务器。','保留 runtime 子目录；配置与历史保存在当前用户目录，卸载时保留。','安装目录内运行 Uninstall.exe，或从 Windows 应用列表卸载 PairShell。') | Set-Content -LiteralPath (Join-Path $package '使用说明.txt') -Encoding utf8
  $deletes=[Collections.Generic.List[string]]::new()
  foreach($file in Get-ChildItem -LiteralPath $package -Recurse -File){
   $relative=[IO.Path]::GetRelativePath($package,$file.FullName)
@@ -31,5 +37,8 @@ foreach($currentRole in $roles){
  $script | Set-Content -LiteralPath (Join-Path $stage 'installer.nsi') -Encoding utf8BOM
  & $compiler /V2 (Join-Path $stage 'installer.nsi')
  if($LASTEXITCODE -ne 0){throw "Installer build failed: $currentRole"}
+ $distribution=Join-Path $repo "bin/Windows-$currentRole"
+ New-Item -ItemType Directory -Force -Path $distribution | Out-Null
+ Copy-Item -LiteralPath $output -Destination (Join-Path $distribution 'PairShell-Setup.exe') -Force
  Get-FileHash -LiteralPath $output -Algorithm SHA256
 }

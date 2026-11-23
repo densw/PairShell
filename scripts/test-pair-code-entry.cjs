@@ -9,6 +9,8 @@ vm.runInContext(fs.readFileSync('internal/uiassets/merchant.js','utf8'),ctx);
  for(let i=0;i<40;i++)await Promise.resolve();
  el('#pair-code').value='１２３４-５６７８-９０１２';el('#pair-code').oninput();
  assert.equal(el('#pair-code').value,'123456789012');assert.equal(slots.map(s=>s.textContent).join(''),'123456789012');
+ el('#pair-code').value='\u200e２８３７–８８１７–９００９\u200f';el('#pair-code').oninput();assert.equal(el('#pair-code').value,'283788179009');assert.equal(el('#pair-code').ariaInvalid,'false');
+ el('#pair-code').value='12345678901234';el('#pair-code').oninput();await el('#connect-form').onsubmit({preventDefault(){}});assert.equal(joins,0,'legacy 14-digit codes are not supported');
  el('#pair-code').value='123';await el('#connect-form').onsubmit({preventDefault(){}});assert.equal(joins,0);
  el('#pair-code').value='123456123456789';el('#pair-code').oninput();assert.equal(el('#pair-code').ariaInvalid,'true');await el('#connect-form').onsubmit({preventDefault(){}});assert.equal(joins,0,'long paste must never be silently truncated and submitted');
  el('#pair-code').value='1234-5678-9012';await el('#connect-form').onsubmit({preventDefault(){}});assert.equal(joins,1);

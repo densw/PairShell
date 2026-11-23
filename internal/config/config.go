@@ -26,9 +26,10 @@ var OfficialServer = "https://relay.pairshell.top"
 const maxConfigBytes = 4096
 
 type Settings struct {
-	Server       string `json:"server"`
-	ForceCustom  bool   `json:"force_custom,omitempty"`
-	TrustedCAPEM string `json:"trusted_ca_pem,omitempty"`
+	Server           string `json:"server"`
+	ForceCustom      bool   `json:"force_custom,omitempty"`
+	TrustedCAPEM     string `json:"trusted_ca_pem,omitempty"`
+	ServerConfigured bool   `json:"server_configured,omitempty"`
 }
 
 func DefaultPath() (string, error) {
@@ -92,8 +93,9 @@ func Load(path string) (Settings, error) {
 	if d.Decode(&extra) != io.EOF {
 		return Settings{}, errors.New("配置含多余内容")
 	}
-	if cfg.Server == "https://167.104.165.174:9443" && !cfg.ForceCustom {
-		cfg.Server, cfg.TrustedCAPEM = "", ""
+	legacyServer := strings.TrimSuffix(cfg.Server, "/")
+	if !cfg.ServerConfigured && (legacyServer == "https://192.168.31.178:9443" || legacyServer == "https://192.168.31.178" || legacyServer == "https://167.104.165.174:9443" && !cfg.ForceCustom) {
+		cfg.Server, cfg.TrustedCAPEM, cfg.ForceCustom = "", "", false
 	}
 	if cfg.Server != "" {
 		cfg.Server, e = ValidateServer(cfg.Server)
@@ -147,6 +149,7 @@ func Save(path string, cfg Settings) error {
 	if cfg.ForceCustom && cfg.Server == "" {
 		return errors.New("强制自定义模式需要填写服务器地址")
 	}
+	cfg.ServerConfigured = cfg.Server != ""
 	if s, e := os.Lstat(path); e == nil && !s.Mode().IsRegular() {
 		return errors.New("配置目标不是普通文件")
 	} else if e != nil && !os.IsNotExist(e) {

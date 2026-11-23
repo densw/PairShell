@@ -1,4 +1,4 @@
-param([string]$Version='1.1.0')
+param([string]$Version='1.1.2')
 $ErrorActionPreference = 'Stop'
 if($Version -notmatch '^\d+\.\d+\.\d+$'){throw 'Version must use major.minor.patch'}
 $repo = Split-Path $PSScriptRoot -Parent
@@ -41,8 +41,9 @@ try {
   $legal=Join-Path $runtime 'licenses'
   New-Item -ItemType Directory -Force -Path $legal | Out-Null
   Copy-Item "$repo/docs/THIRD_PARTY_NOTICES.md","$repo/docs/WEBVIEW2-LICENSE.txt","$repo/docs/WEBVIEW2-NOTICE.txt" $legal
-  @("PairShell $Version",'PairShell.Customer.exe：默认接受协助；PairShell.Merchant.exe：默认发起协助。应用内仍可互相切换。','两个入口共用 runtime 中的核心程序。客户核对校验码后，只需允许一次完整协助。','默认使用官方通道 https://relay.pairshell.top；自定义服务器可在设置中配置。配置和历史保存在当前用户目录。','安装版会创建 Uninstall.exe，可从 Windows 应用列表或开始菜单卸载。卸载保留配置和历史。','请保留 runtime 子目录。若缺少 WebView2 Runtime，请安装微软官方运行时。') | Set-Content "$output/使用说明.txt" -Encoding utf8
+  @("PairShell $Version",'PairShell.Customer.exe：默认接受协助；PairShell.Merchant.exe：默认发起协助。应用内仍可互相切换。','两个入口共用 runtime 中的核心程序。客户核对校验码后，只需允许一次完整协助。','默认使用官方通道 https://relay.pairshell.top；自定义服务器可在设置中配置。配置和历史保存在当前用户目录。','安装版与便携版均提供 Uninstall.exe；请先关闭该目录中的 PairShell。卸载保留配置、历史和自行放入的其他文件。','请保留 runtime 子目录。若缺少 WebView2 Runtime，请安装微软官方运行时。') | Set-Content "$output/使用说明.txt" -Encoding utf8
+  & (Join-Path $PSScriptRoot 'package-windows-portable-uninstaller.ps1') -Version $Version
   $rootFiles=@(Get-ChildItem -LiteralPath $output -File)
-  if($rootFiles.Count -ne 3 -or -not(Test-Path "$output/PairShell.Customer.exe") -or -not(Test-Path "$output/PairShell.Merchant.exe") -or -not(Test-Path "$runtime/PairShell.exe") -or -not(Test-Path "$runtime/PairShellBackend.exe")){throw 'Invalid clean release layout'}
+  if($rootFiles.Count -ne 4 -or -not(Test-Path "$output/Uninstall.exe") -or -not(Test-Path "$output/PairShell.Customer.exe") -or -not(Test-Path "$output/PairShell.Merchant.exe") -or -not(Test-Path "$runtime/PairShell.exe") -or -not(Test-Path "$runtime/PairShellBackend.exe")){throw 'Invalid clean release layout'}
   Compress-Archive "$output/*" "$repo/bin/PairShell-$Version-Windows-x64.zip" -Force
 } finally { $env:GOOS=$oldOS; $env:GOARCH=$oldArch }

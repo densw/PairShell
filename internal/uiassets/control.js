@@ -1,12 +1,11 @@
 const controlTokenKey='pairshell.control';
 let controlToken='',eventCursor=0,sessionEnded=false,returnURL='',busy=false,timer,lostConnection=false;
-const verificationInput=document.querySelector('#customer-verification-input');
+let displayedVerification='';
 let customerState='LOADING';
 function refreshConsentButton(){
  const button=document.querySelector('button[data-action="consent"]');
- button.disabled=busy||sessionEnded||customerState!=='AWAITING_CONSENT'||!/^[a-f0-9]{24}$/i.test((verificationInput.value||'').trim());
+ button.disabled=busy||sessionEnded||customerState!=='AWAITING_CONSENT'||!displayedVerification;
 }
-verificationInput.oninput=refreshConsentButton;
 function controlFetch(path, options={}) {
  return fetch(path,{...options,credentials:'omit',headers:{...options.headers,'X-PairShell-Control':controlToken}});
 }
@@ -19,7 +18,8 @@ async function refresh(){
  const r=await controlFetch('/api/session');if(!r.ok)throw Error('本机会话认证失败');const v=await r.json();rememberReturn(v.return_url);sessionEnded=v.session.state==='ENDED';
  lostConnection=false;renderReturn();
  customerState=v.session.state;document.body.dataset.session=customerState;PairShellMirror.setState(customerState);
- document.querySelector('#verification').textContent=v.verification_code||'尚未完成身份校验';document.querySelector('#session-state').textContent=({ACTIVE:'协助进行中',PAUSED:'已暂停',AWAITING_CONSENT:'等待你的授权',ENDED:'会话已结束'})[v.session.state]||v.session.state;document.querySelector('#session-state').dataset.state=v.session.state;
+ displayedVerification=/^[a-f0-9]{24}$/i.test(v.verification_code||'')?v.verification_code:'';
+ document.querySelector('#verification').textContent=displayedVerification?displayedVerification.match(/.{6}/g).join(' '):'尚未完成身份校验';document.querySelector('#session-state').textContent=({ACTIVE:'协助进行中',PAUSED:'已暂停',AWAITING_CONSENT:'等待你的授权',ENDED:'会话已结束'})[v.session.state]||v.session.state;document.querySelector('#session-state').dataset.state=v.session.state;
  document.querySelectorAll('button[data-action]').forEach(b=>{b.hidden=({consent:customerState!=='AWAITING_CONSENT',pause:customerState!=='ACTIVE',resume:customerState!=='PAUSED',end:customerState==='ENDED'})[b.dataset.action];b.disabled=busy||b.hidden});
  refreshConsentButton();
  document.querySelector('#status').textContent=JSON.stringify({verification_code:v.verification_code,file_root:v.file_root,...v.session},null,2);
@@ -49,10 +49,9 @@ document.querySelectorAll('button[data-action]').forEach(b=>b.onclick=async()=>{
   let body;
   if(action==='consent'){
    const caps={};['terminal','tasks','file_read','file_write'].forEach(k=>caps[k]=document.getElementById(k).checked);
-   body={capabilities:caps,ai:document.getElementById('ai').checked,verification_code:verificationInput.value.trim()};
+   body={capabilities:caps,ai:document.getElementById('ai').checked,verification_code:displayedVerification};
   }
   const result=await call(action,body);
-  if(action==='consent')verificationInput.value='';
   if(result.state==='ENDED'){renderEnded()}else{busy=false;await refresh()}
  }catch(e){
   if(action==='consent'&&!(e instanceof TypeError))error.textContent=e.message;else connectionError(e)

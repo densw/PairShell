@@ -24,9 +24,11 @@ import (
 	"pairshell/internal/pairing"
 	"strings"
 	"time"
+	"unicode"
 )
 
 var ErrCode = errors.New("PAIR_CODE_UNAVAILABLE: 配对码无效、已使用或已过期，请生成新码")
+var ErrFormat = errors.New("PAIR_CODE_FORMAT: 请输入完整的 12 位配对码，不支持旧版码")
 
 const maxLocalAttempts = 3
 
@@ -117,15 +119,15 @@ func (e *endpoint) call(ctx context.Context, path string, message []byte) (respo
 	r.Header.Set("Content-Type", "application/json")
 	res, err := e.client.Do(r)
 	if err != nil {
-		return response{}, ErrCode
+		return response{}, &RequestError{Operation: path}
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return response{}, ErrCode
+		return response{}, &RequestError{Operation: path, Status: res.StatusCode}
 	}
 	var out response
 	if err = json.NewDecoder(io.LimitReader(res.Body, 16385)).Decode(&out); err != nil {
-		return out, ErrCode
+		return out, &RequestError{Operation: path, Status: http.StatusBadGateway}
 	}
 	return out, nil
 }
@@ -146,13 +148,21 @@ func displayCode(locator, secret string) string {
 	return strings.Join(append(groups, raw), "-")
 }
 func parse(code string) (string, string, error) {
-	compact := strings.NewReplacer("-", "", " ", "", "\t", "", "\n", "", "\r", "").Replace(code)
-	if len(compact) != 12 && len(compact) != 14 {
-		return "", "", ErrCode
+	compact := strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) || r == '-' || r >= 0x2010 && r <= 0x2015 || r == 0x2212 || r == 0xfe63 || r == 0xff0d || r >= 0x200b && r <= 0x200f || r >= 0x202a && r <= 0x202e || r >= 0x2060 && r <= 0x2069 || r == 0xfeff {
+			return -1
+		}
+		if r >= '０' && r <= '９' {
+			return r - 0xfee0
+		}
+		return r
+	}, code)
+	if len(compact) != 12 {
+		return "", "", ErrFormat
 	}
 	for _, r := range compact {
 		if r < '0' || r > '9' {
-			return "", "", ErrCode
+			return "", "", ErrFormat
 		}
 	}
 	return compact[:6], compact[6:], nil

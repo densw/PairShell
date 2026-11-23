@@ -74,7 +74,7 @@ func run() error {
 	}
 	switch os.Args[1] {
 	case "version", "--version":
-		fmt.Fprintln(os.Stdout, "PairShell 1.1.1")
+		fmt.Fprintln(os.Stdout, "PairShell 1.1.2")
 		return nil
 	case "config":
 		if *server != "" {
