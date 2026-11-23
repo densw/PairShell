@@ -1,0 +1,8 @@
+FROM coturn/coturn:4.19.2-r0@sha256:ccdbc51e6f072130b0fc9eebda21f8d026d0a25581746c52557e887818011a3f
+USER root
+# The upstream binary carries a privileged-port file capability. Copying its
+# content without extended attributes permits a genuinely cap-drop-ALL runtime
+# on our nonprivileged port 3478 instead of granting extra capabilities.
+RUN cp /usr/bin/turnserver /usr/bin/turnserver-unprivileged && chmod 755 /usr/bin/turnserver-unprivileged
+USER 1000:1001
+ENTRYPOINT ["/usr/bin/turnserver-unprivileged"]

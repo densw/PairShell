@@ -1,0 +1,15 @@
+# Audit v1 implementation
+
+`NewWriter(directory, sessionID)` creates an exclusive 0600 events file after a sync check. The caller must append `session.start` with both public keys and the authorization digest before enabling execution. Append assigns sequence, UTC and monotonic times and fsyncs every record; any write failure permanently closes the recording gate (caller must terminate execution). Use `terminal.output` with payload `{"data_b64":"..."}`. Caller must separately record input intent before PTY writes and actual written counts afterwards.
+
+The hash is SHA256(domain `PairShell:event:v1` followed by NUL, previous raw 32 bytes, exact decoded event bytes). `{}` following the all-zero previous hash gives `34b9e8989c5defbab11875b3f8bdee13dc4c3353820fc5d41335c5e71a3bd6e2` (independently reproduced by Python hashlib).
+
+Close appends session.end, derives asciicast v2 and transcript, then writes the manifest. Verify checks versions, sequences, session, monotonic order, integer payloads, chain, final event and manifest reason, file digests and reconstruction. Missing manifest is explicitly incomplete. It cannot detect malicious replacement of the entire unauthenticated package; require externally pinned witnessed checkpoints for that claim. Offline verification currently has a 256 MiB total limit, 1 MiB event limit; callers must surface this limit rather than report validity. Export generation buffers a bounded verification file in memory and is not yet a streaming multi-gigabyte implementation.
+
+Replay writes raw recorded bytes; a screen UI must sanitize ANSI. Transcript is raw evidence, not safe HTML. Initial cast geometry is 80x24; resize derivation is pending.
+
+`OpenWitness(directory, Ed25519PrivateKey)` reconstructs receipt indexes and validates their signatures. First Register a Declaration signed by both temporary session keys, then submit signed checkpoints. Checkpoint indexes, previous receipt hash, nondecreasing sequence, same-sequence hash, customer identity and final closure are enforced. `VerifyReceipt(receipt, externallyTrustedPublicKey)` rejects an unknown key. A valid receipt witnesses only the checkpoint claim, not the reality of execution. Publication must bind the manifest digest to final checkpoint and keep receipts on both peers; scheduling/network retry and UI warning policy belong to session integration.
+
+Outstanding release gates: final checkpoint manifest binding, periodic witness queue and backlog pause, key pin distribution, cross-user Windows ACL adversarial testing, wall-clock jump events, encrypted redacted export UX, terminal resize derivation, crash-tail recovery, independent security review. These are explicit unfinished requirements, not production guarantees.
+
+Private directories now use internal/securefile: protected current-process-user DACL on Windows, 0700 on Unix. The Windows ACL is read back and verified; audit child files inherit the restricted directory. This protects against ordinary other users, not administrators. Callers must place private directories beneath a trusted parent; these helpers do not provide an adversarial TOCTOU sandbox.

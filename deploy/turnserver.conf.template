@@ -1,0 +1,35 @@
+# Replace realm, external-ip and static-auth-secret before deployment.
+listening-port=3478
+tls-listening-port=5349
+min-port=49160
+max-port=49200
+realm=relay.example
+external-ip=203.0.113.10
+use-auth-secret
+static-auth-secret=REPLACE_WITH_PAIRSHELL_TURN_SECRET
+fingerprint
+cert=/certs/fullchain.pem
+pkey=/certs/privkey.pem
+no-cli
+no-multicast-peers
+no-software-attribute
+total-quota=40
+user-quota=8
+max-bps=1048576
+bps-capacity=33554432
+max-allocate-lifetime=600
+# UDP, TCP and TLS clients stay enabled. PairShell uses UDP relay endpoints.
+no-dtls
+no-tcp-relay
+denied-peer-ip=0.0.0.0-0.255.255.255
+denied-peer-ip=10.0.0.0-10.255.255.255
+denied-peer-ip=100.64.0.0-100.127.255.255
+denied-peer-ip=127.0.0.0-127.255.255.255
+denied-peer-ip=169.254.0.0-169.254.255.255
+denied-peer-ip=172.16.0.0-172.31.255.255
+denied-peer-ip=192.168.0.0-192.168.255.255
+denied-peer-ip=::1
+denied-peer-ip=fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+denied-peer-ip=fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+no-tlsv1
+no-tlsv1_1

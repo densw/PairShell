@@ -1,0 +1,15 @@
+.tools
+.git
+data
+bin
+.omx
+.codegraph
+**/.env
+**/.env.*
+**/certs
+**/secrets
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.invite
+**/turnserver.conf

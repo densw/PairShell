@@ -1,0 +1,30 @@
+[
+  {
+    "file": "xterm.js",
+    "sha256": "14903579ff54664cd72f8e8699e6961a6272c21863ec1c3b118cdc8af5d4a972"
+  },
+  {
+    "file": "xterm.css",
+    "sha256": "854a7c0fb70e8b1a083c16797ab827299fb18744f5ad34f227b48337e33293c6"
+  },
+  {
+    "file": "xterm.LICENSE",
+    "sha256": "b569f629d00f2626a8100df2a1798210535621e42164dfd426a6fe5aac7b0ccd"
+  },
+  {
+    "file": "xterm.package.json",
+    "sha256": "f5a0dde40a146d6c7a86b22daf6e5740517e5d708ec1d162197e0445431d8f4f"
+  },
+  {
+    "file": "addon-fit.js",
+    "sha256": "ba3ea256ce0620a0992a197d6c9baea64823fc93d8da07a9e366ca9943c18527"
+  },
+  {
+    "file": "addon-fit.LICENSE",
+    "sha256": "e256f01188af527e4d06d21d06fbf785ae9c50d4b328bf03cbe0ba7f0aa4228f"
+  },
+  {
+    "file": "addon-fit.package.json",
+    "sha256": "2f1016c5683f76ac1250c466afc29164bc82da7c2ef224c7d5ab83397edf1637"
+  }
+]

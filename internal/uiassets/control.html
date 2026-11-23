@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PairShell · 本次协助</title><link rel="stylesheet" href="/ui.css"><link rel="stylesheet" href="/terminal-assets/xterm.css"></head>
+<body class="customer-session" data-session="LOADING">
+<header class="appbar"><div class="brand"><span class="mark" aria-hidden="true"><svg viewBox="0 0 1024 1024" width="27" height="27" aria-hidden="true"><rect width="1024" height="1024" rx="228" fill="#151E2E"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M414 262H310L262 310V714L310 762H414" stroke="#628BFF" stroke-width="80"/>
+    <path d="M610 262H714L762 310V714L714 762H610" stroke="#47D8C8" stroke-width="80"/>
+    <path d="M402 422L492 512L402 602M552 602H626" stroke="#F0F6FF" stroke-width="64"/>
+  </g>
+</svg></span>PairShell<span class="context">本次协助</span></div><div class="control-nav"><button id="back-pairing" type="button" hidden>结束并返回配对</button><button id="show-records" type="button">操作记录</button><span class="badge" id="session-state">正在读取状态</span></div></header>
+<main class="frame customer-workspace"><div id="control-loading" role="status"><span class="handoff-spinner" aria-hidden="true"></span><div><h2>正在打开本次协助</h2><p>正在读取连接对象和授权状态…</p></div></div><div class="heading consent-heading"><div><p class="eyebrow">确认连接对象</p><h1>是否允许完整协助？</h1><p class="muted">核对校验码后允许一次，即可持续协助。你可以实时观看、暂停或结束。</p></div></div>
+<div class="session-grid consent-panels">
+<section class="panel"><div class="panelhead"><h2>核对连接对象</h2><span class="caption">仅本次有效</span></div><div class="panelbody"><p class="caption">这是你设备上的校验码。请通过已有的聊天或电话与协助方交换校验码。</p><div id="verification" class="code">正在读取校验码…</div><label for="customer-verification-input" class="field">协助方设备上显示的校验码</label><input id="customer-verification-input" maxlength="24" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="error"><p class="warn">校验码不一致或并非你联系的协助人员，请直接结束。只有你能在本机授权。</p></div></section>
+<section class="panel permissions"><div class="panelhead"><h2>本次允许的操作</h2><span class="caption">结束后失效</span></div><div class="panelbody">
+<fieldset><label><input type="checkbox" id="terminal" checked><span><strong>终端协助</strong><small>持续输入命令，支持快捷键与交互程序。</small></span></label><label><input type="checkbox" id="tasks" checked><span><strong>命令任务</strong><small>通过 CLI 提交任务，无需逐条确认。</small></span></label><label><input type="checkbox" id="file_read" checked><span><strong>文件读取</strong><small>读取当前账号可访问的真实路径。</small></span></label><label><input type="checkbox" id="file_write" checked><span><strong>文件修改</strong><small>创建和修改当前账号可写的文件。</small></span></label><label><input type="checkbox" id="ai" checked><span><strong>AI 接入（MCP）</strong><small>相关内容可能发送到协助方的模型服务。</small></span></label></fieldset>
+<p class="subtle">仅在你允许后生效，使用当前登录账号的权限，不自动获取管理员权限。</p>
+</div></section>
+</div>
+<section class="toolbar customer-controls"><div class="actions"><button class="primary" data-action="consent" disabled>允许完整协助</button><button data-action="pause" disabled>暂停对方输入</button><button data-action="resume" disabled>恢复对方输入</button><button data-action="end" disabled>结束协助</button></div><p id="error" role="alert"></p><div id="session-finish" class="session-finish" hidden><strong>本次协助已结束</strong><p>授权已撤销。你可以保留查看本次画面，或返回生成新配对码。</p></div><a id="new-session" class="new-session" hidden>返回配对，开始新的协助</a><p class="subtle">暂停会阻止新的输入，已运行程序仍可输出；结束协助会断开终端，不会回滚已完成的修改。</p></section>
+<section id="terminal-mirror" class="panel terminal-mirror" hidden aria-label="协助终端，只读"><div class="panelhead"><h2>协助终端 <span class="pill">仅供观看</span></h2><span id="mirror-status" class="caption" role="status">等待终端画面</span></div><div class="mirror-viewport"><div id="customer-terminal"></div></div><p id="mirror-note" class="mirror-note">与协助方同一终端画面，按窗口缩放；仅供观看和复制，不能输入命令。</p></section>
+<div hidden><pre id="status"></pre><pre id="outputs"></pre><pre id="events"></pre></div>
+<dialog id="records-dialog" class="session-dialog"><div class="dialog-heading"><h2>本次操作记录</h2><button id="close-records" class="icon-close" aria-label="关闭操作记录" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="record-tabs"><button id="record-status" type="button">连接详情</button><button id="record-outputs" type="button">任务输出</button><button id="record-events" type="button">审计事件</button></div><pre id="record-page" class="record-page" tabindex="0" aria-label="可滚动的操作记录"></pre><p class="caption">仅供查看；完整内容保存在本机审计日志中。</p></dialog>
+<footer class="foot"><span class="secure">本机授权 · 临时连接 · 本机记录</span><span>连接状态不代表任务成功或日志已获远端见证</span></footer>
+</main><script src="/terminal-assets/xterm.js"></script><script src="/terminal-view.js"></script><script src="/app.js"></script>
+</body></html>

@@ -1,0 +1,27 @@
+services:
+  coordinator:
+    build: ..
+    restart: unless-stopped
+    environment:
+      PAIRSHELL_CREATE_TOKEN: ${PAIRSHELL_CREATE_TOKEN:?Set deployment creation token}
+      PAIRSHELL_WITNESS_TOKEN: ${PAIRSHELL_WITNESS_TOKEN:?Set separate witness token}
+      PAIRSHELL_TURN_SECRET: ${PAIRSHELL_TURN_SECRET:?Set TURN shared secret}
+      PAIRSHELL_TURN_URLS: ${PAIRSHELL_TURN_URLS:?Set TURN URLs}
+    ports:
+      - "443:8443/tcp"
+    volumes:
+      - pairshell-data:/data
+      - ${PAIRSHELL_CERT_DIR:?Set certificate directory outside the repository}:/certs:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  coturn:
+    image: coturn/coturn:4.19.2-r0@sha256:ccdbc51e6f072130b0fc9eebda21f8d026d0a25581746c52557e887818011a3f
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ${PAIRSHELL_TURN_CONFIG:?Set TURN configuration file outside the repository}:/etc/coturn/turnserver.conf:ro
+      - ${PAIRSHELL_CERT_DIR:?Set certificate directory outside the repository}:/certs:ro
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+volumes:
+  pairshell-data:

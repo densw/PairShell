@@ -1,0 +1,35 @@
+name: pairshell-lan
+services:
+  coordinator:
+    build: .
+    image: pairshell-lan:local
+    user: "1000:1001"
+    restart: unless-stopped
+    command: ["--listen","0.0.0.0:9443","--tls-cert","/certs/server.pem","--tls-key","/certs/server.key","--device-pairing"]
+    environment:
+      PAIRSHELL_CREATE_TOKEN: ${PAIRSHELL_CREATE_TOKEN:?required}
+      PAIRSHELL_WITNESS_TOKEN: ${PAIRSHELL_WITNESS_TOKEN:?required}
+      PAIRSHELL_TURN_SECRET: ${PAIRSHELL_TURN_SECRET:?required}
+      PAIRSHELL_TURN_URLS: "stun:${PAIRSHELL_LAN_IP:?Set LAN address}:3478,turn:${PAIRSHELL_LAN_IP:?Set LAN address}:3478?transport=udp,turn:${PAIRSHELL_LAN_IP:?Set LAN address}:3478?transport=tcp"
+    ports: ["${PAIRSHELL_LAN_IP:?Set LAN address}:9443:9443/tcp"]
+    volumes:
+      - "${PAIRSHELL_CERT_DIR:?Set certificate directory outside the repository}/server.pem:/certs/server.pem:ro"
+      - "${PAIRSHELL_CERT_DIR:?Set certificate directory outside the repository}/server.key:/certs/server.key:ro"
+      - ./data:/data
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  coturn:
+    build:
+      context: .
+      dockerfile: Dockerfile.turn
+    image: pairshell-coturn-lan:local
+    user: "1000:1001"
+    restart: unless-stopped
+    network_mode: host
+    command: ["-c","/etc/coturn/turnserver.conf"]
+    volumes:
+      - "${PAIRSHELL_TURN_CONFIG:?Set TURN configuration file outside the repository}:/etc/coturn/turnserver.conf:ro"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
