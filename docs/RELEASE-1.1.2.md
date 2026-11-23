@@ -10,7 +10,7 @@
 
 主要界面文件：`internal/uiassets/ui.css`、`terminal-assets/workspace.css`、`invite.html`、`merchant.html`、`history.js`。版本号更新到 1.1.2，界面行为继续使用现有实现，没有新增应用运行依赖。
 
-## 本地发布包
+## 发布包
 
 - Windows 客户端：`Windows-Customer/PairShell-Setup.exe`，默认接受协助。
 - Windows 商家端：`Windows-Merchant/PairShell-Setup.exe`，默认发起协助。两个文件名相同，在分发目录中区分；安装后入口及快捷方式统一为 `PairShell`，主目录为 `PairShell.exe`、`Uninstall.exe`、使用说明及 runtime。应用内仍可切换角色。
@@ -34,7 +34,7 @@ Mac 构建使用已有通用原生壳和本次新编译后端，重新生成 ad-
 - 便携卸载程序已在 `.tools` 自建临时目录实际执行：错误身份标记被拒绝，正确标记的模拟包文件被移除，额外根目录和 runtime 内文件均保留。没有运行真实安装目录的卸载程序。生成入口为 `scripts/package-windows-portable-uninstaller.ps1`，回归检查为 `scripts/test-portable-uninstaller.py`。
 - 7-Zip 独立检查确认 DMG 为 UDIF ZLIB、内层 HFS+，CRC 正确，包含 Applications 符号链接和两个可执行权限正确的 Mac 二进制文件。解包 App 的全部文件摘要与组装后的签名 App 一致，两个架构的代码页及资源签名摘要检查通过。
 - Mac 尚未真机挂载、启动或迁移验收。包使用 ad-hoc 签名，未做 Apple Developer ID 公证；不能把结构／摘要检查等同于 Gatekeeper 或 Apple 真机验证。
-- 本地包尚未上传为 GitHub 正式 Release。此次不更改现有 v1.1.1 的公网下载链接。
+- v1.1.2 客户端包通过[独立 GitHub Release](https://github.com/densw/PairShell/releases/tag/v1.1.2)发布；v1.1.1 的 Linux CLI／服务端包继续保留，不重建服务端。
 
 ## 本次滚动与默认配置优化
 
