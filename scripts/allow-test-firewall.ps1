@@ -2,18 +2,18 @@
 $ErrorActionPreference='Stop'
 try {
 $repo=Split-Path $PSScriptRoot -Parent
-if(-not $ReportPath){$ReportPath=Join-Path $repo '.tools/firewall-allow-report.json'}
+. "$PSScriptRoot/build-tools.ps1"
+$work=Get-PairShellBuildWork
+if(-not $ReportPath){$ReportPath=Join-Path $work 'firewall-allow-report.json'}
 $admin=[Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())
 if(-not $admin.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)){throw 'Windows firewall changes require administrator rights'}
 $paths=@(
   (Join-Path $repo 'bin/pairshell-windows-amd64.exe'),
-  (Join-Path $repo 'bin/pairshelld-windows-amd64.exe'),
-  (Join-Path $repo '.tools/pairshell-preview.exe'),
-  (Join-Path $repo '.tools/test-bin/lan-network-probe.exe')
+  (Join-Path $repo 'bin/pairshelld-windows-amd64.exe')
 )
-$paths+=@(Get-ChildItem -LiteralPath (Join-Path $repo '.tools/test-bin') -Filter '*.test.exe' -File | ForEach-Object FullName)
-foreach($directory in @((Join-Path $repo 'bin/PairShell-0.6.0-Windows-x64'),(Join-Path ([Environment]::GetFolderPath('Desktop')) 'PairShell-商家端'))){
-  foreach($name in @('PairShell.Customer.exe','PairShell.Merchant.exe','PairShellBackend.exe')){$paths+=Join-Path $directory $name}
+$testBin=Join-Path $work 'test-bin'
+if(Test-Path -LiteralPath $testBin){
+  $paths+=@(Get-ChildItem -LiteralPath $testBin -Filter '*.test.exe' -File | ForEach-Object FullName)
 }
 $paths=@($paths | Where-Object {Test-Path -LiteralPath $_ -PathType Leaf} | ForEach-Object {[IO.Path]::GetFullPath($_)} | Sort-Object -Unique)
 $results=@()

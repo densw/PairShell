@@ -1,5 +1,15 @@
 # Transport, SSH, and terminal implementation
 
+## Clock and lease reference
+
+Invitation expiry, encrypted pairing-code delivery and handshake proofs use the trusted HTTPS coordinator clock instead of comparing server timestamps directly with the client wall clock. The coordinator emits `X-PairShell-Time` in UTC with nanosecond precision; older coordinators remain compatible through HTTP `Date`. Clients advance the reference with local monotonic elapsed time. Request latency and the legacy timestamp rounding interval are charged conservatively for expiry checks. Concurrent or stale replies cannot rewind the reference. Timezones only change timestamp presentation.
+
+Lease replies are converted from the server expiry/reference difference into a local monotonic deadline, capped at 30 seconds and charged from request start. Missing/expired timing data ends authority; a missing expiry is never treated as a positive lifetime. Each renewal request has a maximum ten-second timeout, bounded further by the remaining granted lease. Customer gates and merchant connections stop at the existing deadline if renewal cannot complete. An invalid lease explicitly ends the customer gate before stopping the connection. Consent, signature/HMAC checks, revocation and idle/session limits remain required.
+
+Regression coverage includes +/-48-hour coordinator offsets and UTC-11/UTC+14 presentation, both precise and legacy headers, real HTTPS/PAKE/verification/SSH execution with WebRTC and tailcat, genuine expired invitation rejection, bounded/delayed/malformed lease replies, and cancellation. `ServerClock` tests also cover +/-one-year references and concurrent stale replies. Tests shift application wire timestamps; they never change an operating-system clock or run a real user shell.
+
+The trusted time comes from an already authenticated HTTPS response. TLS certificate validity checks remain enabled and may reject a machine whose calendar date is outside the certificate validity interval; correct that machine clock through its normal time service. This change does not disable TLS verification or change system time. The existing fnOS `clocklease-20261124` coordinator already provides the precise header, so it does not require replacement for client clock-reference support.
+
 ## Tailcat backend
 
 Both endpoints can opt in with `PAIRSHELL_TRANSPORT=tailcat` before starting the CLI or desktop client. The authenticated hello negotiates `tailcat-v1`; if either endpoint is unset, explicitly uses `webrtc`, or is an older client, both use the existing WebRTC backend. Invalid local transport values fail the handshake. The default remains WebRTC while cross-network acceptance is pending. A negotiated tailcat setup failure returns an error; it does not silently change protocols mid-handshake.

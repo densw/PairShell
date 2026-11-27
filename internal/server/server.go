@@ -291,6 +291,9 @@ func (s *Server) authenticated(id, t string) (*room, string) {
 	return nil, ""
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	now := time.Now().UTC()
+	w.Header().Set("X-PairShell-Time", now.Format(time.RFC3339Nano))
+	w.Header().Set("Date", now.Format(http.TimeFormat))
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")

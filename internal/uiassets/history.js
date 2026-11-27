@@ -6,11 +6,11 @@
  dialog.innerHTML='<div class="dialog-heading"><h2>历史操作记录</h2><button type="button" class="icon-close" data-history="close" aria-label="关闭历史记录">×</button></div><div class="history-tools"><input data-history="search" placeholder="搜索标题、备注或会话编号" aria-label="搜索历史"><button type="button" data-history="search-go">搜索</button><button type="button" data-history="new">新建备注</button><label><input type="checkbox" data-history="trash">回收站</label></div><p data-history="message" role="status"></p><div class="history-layout"><div data-history="list" class="history-list" aria-label="历史列表"></div><p data-history="placeholder" class="history-placeholder">选择一条记录查看详情，或点击“新建备注”。</p><section data-history="detail" class="history-detail" hidden><label>标题<input data-history="title" maxlength="100"></label><label>备注<textarea data-history="note" maxlength="8192"></textarea></label><p data-history="info" class="caption"></p><div class="history-actions"><button type="button" data-history="save">保存备注</button><button type="button" data-history="delete">移至回收站</button></div><pre data-history="events" class="history-events" tabindex="0" aria-label="操作记录，只读"></pre><p data-history="loading" class="caption"></p></section></div><p class="caption">修改仅影响标题和备注；删除可在回收站恢复，原始审计内容不会被改写。</p>';
  document.body.appendChild(dialog);
  const el=id=>dialog.querySelector('[data-history="'+id+'"]');
- let selected=null,cursor=0,loading=false,done=false,generation=0;
+ let selected=null,cursor=0,loading=false,done=false,generation=0,outputStarted=false;
  async function request(path,body){const r=await fetch('/history'+path,{method:body===undefined?'GET':'POST',headers:{'X-PairShell':token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});if(!r.ok)throw Error(await r.text());return r.json()}
  function error(e){el('message').textContent=e.message}
  function clearSelection(){
-  generation++;selected=null;cursor=0;loading=false;done=false;
+  generation++;selected=null;cursor=0;loading=false;done=false;outputStarted=false;
   el('detail').hidden=true;el('placeholder').hidden=false;
   el('events').textContent='';el('loading').textContent='';
   el('title').value='';el('note').value='';
@@ -22,19 +22,30 @@
   if(!selected||!list.some(entry=>entry.id===selected.id))clearSelection();
   for(const entry of list){const b=document.createElement('button');b.type='button';b.className='history-entry';b.textContent=entry.title+'\n'+new Date(entry.created).toLocaleString()+(entry.kind==='note'?' · 手动备注':entry.complete?' · 已结束':' · 未完整结束');b.onclick=()=>select(entry);el('list').appendChild(b)}
  }
+ function appendEvent(event){
+  const target=el('events'),data=event.data||'';
+  if(event.type==='terminal.output'){
+   if(!data||(!outputStarted&&!data.trim()))return;
+   outputStarted=true;target.textContent+=data;return;
+  }
+  if(event.type==='connection.started')outputStarted=false;
+  const label=({'connection.started':'协助连接已开始','session.end':'会话已结束'})[event.type]||event.sequence+' '+event.type;
+  if(target.textContent&&!target.textContent.endsWith('\n'))target.textContent+='\n';
+  target.textContent+=label+'\n'+(data?data+'\n':'')+'\n';
+ }
  async function more(){
   if(!dialog.open||loading||done||!selected||selected.kind==='note')return;
   const own=generation,id=selected.id;let received=false;loading=true;el('loading').textContent='正在读取…';
   try{
    const events=await request('/events?id='+encodeURIComponent(id)+'&after='+cursor);
    if(own!==generation)return;
-   for(const event of events){cursor=Math.max(cursor,event.sequence);el('events').textContent+=event.sequence+' '+event.type+'\n'+event.data+'\n\n'}
+   for(const event of events){cursor=Math.max(cursor,event.sequence);appendEvent(event)}
    received=true;done=events.length===0;el('loading').textContent=done?'已显示全部记录':'向下滚动继续读取';
   }catch(e){if(own===generation){error(e);el('loading').textContent='读取失败，滚动可重试'}}
   finally{if(own===generation){loading=false;if(received&&!done&&el('events').scrollHeight<=el('events').clientHeight)await more()}}
  }
  async function select(entry){
-  generation++;selected=entry;cursor=0;done=false;loading=false;
+  generation++;selected=entry;cursor=0;done=false;loading=false;outputStarted=false;
   el('detail').hidden=false;el('placeholder').hidden=true;
   el('title').value=entry.title;el('note').value=entry.note;el('events').textContent=entry.kind==='note'?'手动备注，没有执行日志。':'';el('events').scrollTop=0;
   el('info').textContent=entry.id;el('delete').textContent=entry.deleted?'恢复记录':'移至回收站';

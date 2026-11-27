@@ -5,10 +5,12 @@ import hashlib
 import subprocess
 import tempfile
 import zipfile
+import shutil
+from build_tools import find_tool
 
 parser=argparse.ArgumentParser();parser.add_argument('--version',default='1.1.3');args=parser.parse_args()
 root=Path(__file__).resolve().parents[1]
-seven=root/'.tools/release-0.10.1/mac/7zip-full/7z.exe'
+seven=find_tool('7z', '7zip/7z.exe')
 backend=root/f'bin/PairShell-{args.version}-Windows-x64/runtime/PairShellBackend.exe'
 digest=lambda p:hashlib.sha256(p.read_bytes()).digest()
 with zipfile.ZipFile(root/f'bin/PairShell-{args.version}-Windows-x64.zip') as archive:
@@ -18,7 +20,7 @@ print('Portable package: uninstall EXE and ownership marker PASS')
 for role in ['Customer','Merchant']:
     installer=root/f'bin/PairShell-{args.version}-Windows-x64-{role}-Setup.exe'
     assert installer.is_file(), f'Missing separate {role} installer'
-    stage=Path(tempfile.mkdtemp(prefix='installer-test-',dir=root/'.tools'))
+    stage=Path(tempfile.mkdtemp(prefix='pairshell-installer-test-'))
     subprocess.run([str(seven),'x',str(installer),'-o'+str(stage),'-y'],check=True,stdout=subprocess.DEVNULL)
     assert (stage/'PairShell.exe').read_bytes()[:2]==b'MZ', 'Both installers must expose the same PairShell.exe name'
     assert not list(stage.glob('PairShell.*.exe')), 'Installed EXE names must not contain role suffixes'
@@ -27,6 +29,7 @@ for role in ['Customer','Merchant']:
     assert not (stage/'runtime/.pairshell-portable').exists(), 'Installed-role payload must not masquerade as portable'
     assert digest(stage/'runtime/PairShellBackend.exe')==digest(backend), 'Wrong shared backend'
     assert digest(stage/'runtime/PairShell.exe')==digest(root/f'bin/PairShell-{args.version}-Windows-x64/runtime/PairShell.exe'), 'Wrong native core'
+    shutil.rmtree(stage)
     print(role+': installer payload PASS')
 source=(root/'native/windows/installer.nsi').read_text(encoding='utf-8')
 assert 'Function .onVerifyInstDir' not in source, 'Must not reject parent folders during browse'

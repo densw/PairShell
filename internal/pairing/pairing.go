@@ -59,6 +59,19 @@ func (i Invite) URL() string {
 	return i.Base + "/pair#" + q.Encode()
 }
 func ParseInvite(raw string, now time.Time) (Invite, error) {
+	i, err := DecodeInvite(raw)
+	if err != nil {
+		return i, err
+	}
+	if i.Expires <= now.Unix() {
+		return i, errors.New("INVITE_EXPIRED")
+	}
+	return i, nil
+}
+
+// DecodeInvite validates invitation structure without consulting a local clock.
+// Callers must check expiry against trusted coordinator time before consent.
+func DecodeInvite(raw string) (Invite, error) {
 	var i Invite
 	if len(raw) > 4096 {
 		return i, errors.New("invalid invite")
@@ -95,7 +108,7 @@ func ParseInvite(raw string, now time.Time) (Invite, error) {
 		return i, errors.New("invalid invite")
 	}
 	i.Expires, e = strconv.ParseInt(q.Get("exp"), 10, 64)
-	if e != nil || i.Expires <= now.Unix() {
+	if e != nil {
 		return i, errors.New("INVITE_EXPIRED")
 	}
 	return i, nil
@@ -133,11 +146,16 @@ func Authenticate(secret []byte, key ed25519.PrivateKey, role string, t Transcri
 	return Proof{mac.Sum(nil), ed25519.Sign(key, b)}, nil
 }
 func Verify(secret []byte, role string, t Transcript, p Proof) error {
+	return VerifyAt(secret, role, t, p, time.Now())
+}
+
+// VerifyAt validates the proof and expiry against an explicit trusted time.
+func VerifyAt(secret []byte, role string, t Transcript, p Proof, now time.Time) error {
 	b, e := transcriptBytes(role, t)
 	if e != nil || len(secret) != 32 {
 		return errors.New("PAIRING_MISMATCH")
 	}
-	if t.Expires <= time.Now().Unix() {
+	if t.Expires <= now.Unix() {
 		return errors.New("INVITE_EXPIRED")
 	}
 	mac := hmac.New(sha256.New, secret)

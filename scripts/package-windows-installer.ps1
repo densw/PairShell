@@ -3,14 +3,16 @@ $ErrorActionPreference='Stop'
 if($Version -notmatch '^\d+\.\d+\.\d+$'){throw 'Invalid version'}
 $repo=Split-Path $PSScriptRoot -Parent
 $source=Join-Path $repo "bin/PairShell-$Version-Windows-x64"
-$compiler=Get-ChildItem -LiteralPath (Join-Path $repo '.tools/nsis') -Filter makensis.exe -Recurse | Select-Object -First 1 -ExpandProperty FullName
+. "$PSScriptRoot/build-tools.ps1"
+$compiler=Find-PairShellTool 'makensis' @('nsis/nsis-3.13/makensis.exe')
 if(-not $compiler){throw 'NSIS portable compiler is required'}
 $roles=if($Role -eq 'Both'){@('Customer','Merchant')}else{@($Role)}
 foreach($currentRole in $roles){
  $label=if($currentRole -eq 'Customer'){'客户端'}else{'商家端'}
- $stage=Join-Path $repo ('.tools/installer-'+$currentRole+'-'+[guid]::NewGuid().ToString('N'))
+ $stage=Join-Path (Get-PairShellBuildWork) ('installer-'+$currentRole+'-'+[guid]::NewGuid().ToString('N'))
  $package=Join-Path $stage 'payload'
  New-Item -ItemType Directory -Force -Path $package | Out-Null
+ try {
  $roleRuntime=Join-Path $package 'runtime'
  New-Item -ItemType Directory -Path $roleRuntime | Out-Null
  Get-ChildItem -LiteralPath (Join-Path $source 'runtime') -Force | Where-Object Name -ne '.pairshell-portable' | ForEach-Object {Copy-Item -LiteralPath $_.FullName -Destination $roleRuntime -Recurse}
@@ -37,8 +39,6 @@ foreach($currentRole in $roles){
  $script | Set-Content -LiteralPath (Join-Path $stage 'installer.nsi') -Encoding utf8BOM
  & $compiler /V2 (Join-Path $stage 'installer.nsi')
  if($LASTEXITCODE -ne 0){throw "Installer build failed: $currentRole"}
- $distribution=Join-Path $repo "bin/Windows-$currentRole"
- New-Item -ItemType Directory -Force -Path $distribution | Out-Null
- Copy-Item -LiteralPath $output -Destination (Join-Path $distribution 'PairShell-Setup.exe') -Force
  Get-FileHash -LiteralPath $output -Algorithm SHA256
+ } finally { Remove-PairShellBuildStage $stage }
 }

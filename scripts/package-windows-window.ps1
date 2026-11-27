@@ -2,21 +2,26 @@ param([string]$Version='1.1.3')
 $ErrorActionPreference = 'Stop'
 if($Version -notmatch '^\d+\.\d+\.\d+$'){throw 'Version must use major.minor.patch'}
 $repo = Split-Path $PSScriptRoot -Parent
-$go = Join-Path $repo '.tools/go/bin/go.exe'
-if (-not (Test-Path $go)) { $go = 'go' }
-$dotnet = Join-Path $repo '.tools/dotnet10/dotnet.exe'
-if (-not (Test-Path -LiteralPath $dotnet)) { $dotnet = 'dotnet' }
+. "$PSScriptRoot/build-tools.ps1"
+$go = Find-PairShellTool 'go' @('go/bin/go.exe')
+$dotnet = Find-PairShellTool 'dotnet' @('dotnet10/dotnet.exe')
+if (-not ((& $dotnet --list-sdks) -match '^10\.')) {
+  $dotnet = Find-PairShellTool 'dotnet' @('dotnet10/dotnet.exe') -CacheOnly
+}
 $oldOS=$env:GOOS; $oldArch=$env:GOARCH
+$stage=$null
 try {
   $env:GOOS='windows'; $env:GOARCH='amd64'
   $output = Join-Path $repo "bin/PairShell-$Version-Windows-x64"
   if(Test-Path -LiteralPath $output){throw "Release directory already exists; choose a fresh version or archive it first: $output"}
-  $stage = Join-Path $repo ('.tools/windows-publish-'+[guid]::NewGuid().ToString('N'))
+  $stage = Join-Path (Get-PairShellBuildWork) ('windows-publish-'+[guid]::NewGuid().ToString('N'))
+  $publish = Join-Path $stage 'publish'
+  $intermediate = (Join-Path $stage 'obj') + [IO.Path]::DirectorySeparatorChar
   $runtime = Join-Path $output 'runtime'
   New-Item -ItemType Directory -Force -Path $runtime | Out-Null
-  & $dotnet publish "$repo/native/windows/PairShell.Customer.csproj" -c Release -r win-x64 --self-contained true -p:Version=$Version -o $stage
+  & $dotnet publish "$repo/native/windows/PairShell.Customer.csproj" -c Release -r win-x64 --self-contained true -p:Version=$Version --artifacts-path $stage -p:IncludeProjectNameInArtifactsPaths=false -o $publish
   if ($LASTEXITCODE -ne 0) { throw 'Windows shell build failed' }
-  Copy-Item -LiteralPath (Join-Path $stage 'PairShell.exe') -Destination $runtime
+  Copy-Item -LiteralPath (Join-Path $publish 'PairShell.exe') -Destination $runtime
   $launcherCompiler=Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
   if(-not(Test-Path -LiteralPath $launcherCompiler)){throw '.NET Framework launcher compiler is required'}
   $launcherSource=Join-Path $repo 'native\windows\Launcher.cs'
@@ -25,9 +30,9 @@ try {
   & $launcherCompiler /nologo /target:winexe /reference:System.Windows.Forms.dll "/win32icon:$launcherIcon" "/out:$launcherOutput" $launcherSource
   if($LASTEXITCODE -ne 0){throw 'Role launcher build failed'}
   Copy-Item -LiteralPath "$output/PairShell.Customer.exe" -Destination "$output/PairShell.Merchant.exe"
-  Get-ChildItem -LiteralPath $stage | Where-Object Name -ne 'PairShell.exe' | ForEach-Object {Copy-Item -LiteralPath $_.FullName -Destination $runtime -Recurse -Force}
+  Get-ChildItem -LiteralPath $publish | Where-Object Name -ne 'PairShell.exe' | ForEach-Object {Copy-Item -LiteralPath $_.FullName -Destination $runtime -Recurse -Force}
   # Give WebView2 an explicit native loader path instead of depending on bundle extraction lookup.
-  $assets=Get-Content (Join-Path $repo 'native/windows/obj/project.assets.json') -Raw | ConvertFrom-Json
+  $assets=Get-Content (Join-Path $intermediate 'project.assets.json') -Raw | ConvertFrom-Json
   $webview=($assets.libraries.PSObject.Properties | Where-Object Name -like 'Microsoft.Web.WebView2/*' | Select-Object -First 1).Value.path
   $loader=$null
   foreach($folder in $assets.packageFolders.PSObject.Properties.Name){
@@ -46,4 +51,7 @@ try {
   $rootFiles=@(Get-ChildItem -LiteralPath $output -File)
   if($rootFiles.Count -ne 4 -or -not(Test-Path "$output/Uninstall.exe") -or -not(Test-Path "$output/PairShell.Customer.exe") -or -not(Test-Path "$output/PairShell.Merchant.exe") -or -not(Test-Path "$runtime/PairShell.exe") -or -not(Test-Path "$runtime/PairShellBackend.exe")){throw 'Invalid clean release layout'}
   Compress-Archive "$output/*" "$repo/bin/PairShell-$Version-Windows-x64.zip" -Force
-} finally { $env:GOOS=$oldOS; $env:GOARCH=$oldArch }
+} finally {
+  $env:GOOS=$oldOS; $env:GOARCH=$oldArch
+  Remove-PairShellBuildStage $stage
+}

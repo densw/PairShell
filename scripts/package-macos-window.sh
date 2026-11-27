@@ -4,7 +4,11 @@ version=${PAIRSHELL_VERSION:-1.1.3}
 # Inputs: arm64 Go executable, x86_64 Go executable, Swift source, output DMG.
 test "$#" -eq 4
 test ! -e "$4"
+zip=${4%.dmg}.zip
+test "$zip" != "$4"
+test ! -e "$zip"
 work=$(mktemp -d "${TMPDIR:-/tmp}/pairshell-window.XXXXXXXX")
+trap 'rm -rf "$work"' EXIT HUP INT TERM
 app="$work/image/PairShell.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Helpers" "$app/Contents/Resources"
 cp "$(dirname "$0")/../docs/THIRD_PARTY_NOTICES.md" "$app/Contents/Resources/THIRD_PARTY_NOTICES.md"
@@ -32,9 +36,11 @@ codesign --force --sign - --timestamp=none "$app/Contents/Helpers/PairShellBacke
 codesign --force --sign - --timestamp=none "$app"
 codesign --verify --deep --strict "$app"
 lipo "$app/Contents/MacOS/PairShellCustomer" -verify_arch arm64 x86_64
+ditto -c -k --keepParent "$app" "$zip"
+unzip -t "$zip"
 ln -s /Applications "$work/image/Applications"
 printf '%s\n' "PairShell $version 双端 · 独立终端客户端" '把 PairShell 拖入 Applications 后启动，在应用内切换发起协助或接受协助；客户分享配对码，商家连接后直接使用交互终端。' '关闭窗口或退出应用会结束协助。此开发包仅 ad-hoc 签名，未做 Apple 公证。' > "$work/image/安装说明.txt"
 hdiutil create -volname 'PairShell 远程协助' -srcfolder "$work/image" -format UDZO -fs HFS+ "$4"
 hdiutil verify "$4"
 shasum -a 256 "$4" > "$4.sha256"
-echo "APP=$app"
+echo "ZIP=$zip"

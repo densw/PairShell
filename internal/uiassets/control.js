@@ -1,7 +1,7 @@
 const controlTokenKey='pairshell.control';
 let controlToken='',eventCursor=0,sessionEnded=false,returnURL='',busy=false,timer,lostConnection=false;
 let displayedVerification='';
-let customerState='LOADING';
+let customerState='LOADING',eventOutputStarted=false;
 function refreshConsentButton(){
  const button=document.querySelector('button[data-action="consent"]');
  button.disabled=busy||sessionEnded||customerState!=='AWAITING_CONSENT'||!displayedVerification;
@@ -14,6 +14,30 @@ function rememberReturn(value){if(!value)return;try{const u=new URL(value);if(u.
 function renderEnded(){sessionEnded=true;document.body.dataset.session='ENDED';PairShellMirror.setState('ENDED');document.querySelector('#session-state').textContent='会话已结束';document.querySelector('#session-state').dataset.state='ENDED';document.querySelectorAll('button[data-action]').forEach(button=>{button.disabled=true;button.hidden=true});renderReturn();clearInterval(timer);}
 async function call(p,b){const r=await controlFetch('/api/'+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})});if(!r.ok)throw Error(await r.text());return r.json()}
 function connectionError(e){const text=document.querySelector('#error');lostConnection=true;if(document.body.dataset.session==='LOADING')document.body.dataset.session='UNAVAILABLE';text.textContent=sessionEnded?'本次协助已结束，可以开始新的协助。':(e instanceof TypeError?'本机会话连接不可用。返回配对时会先结束旧会话。':e.message);renderReturn()}
+function appendEvent(event){
+ const target=document.querySelector('#events'),data=event.data||'';
+ if(event.type==='terminal.output'){
+  if(!data||(!eventOutputStarted&&!data.trim()))return;
+  eventOutputStarted=true;target.textContent+=data;return;
+ }
+ if(event.type==='connection.started')eventOutputStarted=false;
+ const label=({'connection.started':'协助连接已开始','session.end':'会话已结束'})[event.type]||event.sequence+' '+event.type;
+ if(target.textContent&&!target.textContent.endsWith('\n'))target.textContent+='\n';
+ target.textContent+=label+'\n'+(data?data+'\n':'')+'\n';
+}
+async function refreshEvents(drain=false){
+ const target=document.querySelector('#events');let more;
+ do{
+  const before=eventCursor,r=await controlFetch('/api/events?after='+eventCursor);if(!r.ok)return;
+  const events=await r.json();
+  for(const event of events){
+   eventCursor=Math.max(eventCursor,event.sequence);appendEvent(event);
+   if(target.textContent.length>262144){let start=target.textContent.length-262144;const code=target.textContent.charCodeAt(start);if(code>=0xdc00&&code<=0xdfff)start++;target.textContent=target.textContent.slice(start)}
+  }
+  more=drain&&events.length>0&&eventCursor>before;
+ }while(more);
+}
+
 async function refresh(){
  const r=await controlFetch('/api/session');if(!r.ok)throw Error('本机会话认证失败');const v=await r.json();rememberReturn(v.return_url);sessionEnded=v.session.state==='ENDED';
  lostConnection=false;renderReturn();
@@ -23,9 +47,9 @@ async function refresh(){
  document.querySelectorAll('button[data-action]').forEach(b=>{b.hidden=({consent:customerState!=='AWAITING_CONSENT',pause:customerState!=='ACTIVE',resume:customerState!=='PAUSED',end:customerState==='ENDED'})[b.dataset.action];b.disabled=busy||b.hidden});
  refreshConsentButton();
  document.querySelector('#status').textContent=JSON.stringify({verification_code:v.verification_code,file_root:v.file_root,...v.session},null,2);
- if(sessionEnded){renderEnded();return}
+ if(sessionEnded){await refreshEvents(true);renderEnded();return}
  const tr=await controlFetch('/api/tasks');if(tr.ok){const tasks=await tr.json();document.querySelector('#outputs').textContent=tasks.map(t=>t.id+' ['+t.state+'] bytes '+t.output_start+'..'+t.output_end+'\n'+t.output).join('\n\n')}
- const er=await controlFetch('/api/events?after='+eventCursor);if(er.ok){for(const ev of await er.json()){eventCursor=Math.max(eventCursor,ev.sequence);const el=document.querySelector('#events');el.textContent+=ev.sequence+' '+ev.type+' '+ev.data+'\n';if(el.textContent.length>262144)el.textContent=el.textContent.slice(-262144)}}
+ await refreshEvents();
 }
 async function start(){
  const params=new URLSearchParams(location.hash.slice(1)),token=params.get('bootstrap');
@@ -52,7 +76,7 @@ document.querySelectorAll('button[data-action]').forEach(b=>b.onclick=async()=>{
    body={capabilities:caps,ai:document.getElementById('ai').checked,verification_code:displayedVerification};
   }
   const result=await call(action,body);
-  if(result.state==='ENDED'){renderEnded()}else{busy=false;await refresh()}
+  if(result.state==='ENDED'){try{await refreshEvents(true)}finally{renderEnded()}}else{busy=false;await refresh()}
  }catch(e){
   if(action==='consent'&&!(e instanceof TypeError))error.textContent=e.message;else connectionError(e)
  }finally{busy=false;if(!sessionEnded&&!b.hidden)b.disabled=false;refreshConsentButton();renderReturn()}

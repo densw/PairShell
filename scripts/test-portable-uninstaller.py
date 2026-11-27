@@ -1,4 +1,4 @@
-"""Run the portable uninstaller only against disposable .tools fixtures."""
+"""Run the portable uninstaller only against disposable OS-temp fixtures."""
 from pathlib import Path
 import argparse
 import shutil
@@ -9,8 +9,8 @@ import time
 p=argparse.ArgumentParser();p.add_argument('--version',default='1.1.3');args=p.parse_args()
 root=Path(__file__).resolve().parents[1]
 package=root/f'bin/PairShell-{args.version}-Windows-x64'
-tools=(root/'.tools').resolve()
-fixture=Path(tempfile.mkdtemp(prefix='portable-uninstall-test-',dir=tools)).resolve()
+tools=Path(tempfile.gettempdir()).resolve()
+fixture=Path(tempfile.mkdtemp(prefix='pairshell-portable-uninstall-test-')).resolve()
 assert fixture.is_relative_to(tools)
 
 def make_case(name,marker):
@@ -41,4 +41,5 @@ assert not any(path.exists() for path in valid_owned), 'Owned files were not ful
 assert (valid/'keep-user-file.txt').read_text(encoding='utf-8')=='preserve me', 'Unrelated files must survive'
 assert (valid/'runtime/keep-user-file.txt').read_text(encoding='utf-8')=='preserve nested data', 'Unrelated runtime files must survive'
 assert (package/'Uninstall.exe').is_file(), 'Actual package must remain untouched'
+shutil.rmtree(fixture)
 print('Portable uninstall: PASS (invalid marker rejected, fixture payload removed, unrelated data preserved)')

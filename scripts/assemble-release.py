@@ -14,6 +14,7 @@ from release_signing import MANIFEST, sha256_file as sha, sign_release
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--version', default='1.1.3')
+    p.add_argument('--output', type=Path, help='Flat release directory (default: dist)')
     p.add_argument('--signing-key', type=Path)
     p.add_argument('--signing-public-key', type=Path)
     args = p.parse_args()
@@ -21,7 +22,7 @@ def main():
         p.error('provide both --signing-key and --signing-public-key')
     assert re.fullmatch(r'\d+\.\d+\.\d+',args.version)
     root=Path(__file__).resolve().parents[1];binary=root/'bin';v=args.version
-    release=binary/('release-'+v)
+    release=(args.output if args.output is not None else root/'dist').resolve()
     assert not release.exists(), 'Release output already exists'
     windows=binary/f'PairShell-{v}-Windows-x64'
     assert {f.name for f in windows.iterdir()}=={'PairShell.Customer.exe','PairShell.Merchant.exe','Uninstall.exe','使用说明.txt','runtime'}
@@ -51,12 +52,6 @@ def main():
     release.mkdir()
     for suffix in ['Windows-x64.zip','Windows-x64-Customer-Setup.exe','Windows-x64-Merchant-Setup.exe','macOS-universal.dmg']:
         shutil.copyfile(binary/f'PairShell-{v}-{suffix}',release/f'PairShell-{v}-{suffix}')
-    for role in ['Customer','Merchant']:
-        destination=release/f'Windows-{role}'
-        destination.mkdir()
-        shutil.copyfile(binary/f'PairShell-{v}-Windows-x64-{role}-Setup.exe',destination/'PairShell-Setup.exe')
-        (destination/MANIFEST).write_text(sha(destination/'PairShell-Setup.exe')+'  PairShell-Setup.exe\n',encoding='utf-8')
-    shutil.copytree(windows,release/windows.name)
     for arch in ['amd64','arm64']:
         output=release/f'PairShell-{v}-Linux-{arch}.tar.gz'
         files={'pairshell':(binary/f'pairshell-linux-{arch}').read_bytes(),'pairshelld':(binary/f'pairshelld-linux-{arch}').read_bytes(),'THIRD_PARTY_NOTICES.md':(root/'docs/THIRD_PARTY_NOTICES.md').read_bytes()}

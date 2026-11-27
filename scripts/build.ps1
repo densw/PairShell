@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'Stop'
 $previousOS = $env:GOOS; $previousArch = $env:GOARCH; $previousCGO = $env:CGO_ENABLED
 try {
-$go = Get-Command go -ErrorAction SilentlyContinue
-if (-not $go) { $go = Get-Item "$PSScriptRoot/../.tools/go/bin/go.exe" }
+. "$PSScriptRoot/build-tools.ps1"
+$go = Find-PairShellTool 'go' @('go/bin/go.exe')
 $targets = @('windows/amd64','linux/amd64','linux/arm64','darwin/amd64','darwin/arm64')
 New-Item -ItemType Directory -Force "$PSScriptRoot/../bin" | Out-Null
 foreach ($target in $targets) {

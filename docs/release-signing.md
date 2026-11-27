@@ -9,8 +9,8 @@
 先完成原生签名、打包和验证。用现有组装脚本汇总并签名，或对已经汇总好的目录单独签名。下列路径是示例，两种方式任选其一。
 
 ```text
-python scripts/assemble-release.py --version 1.2.0 --signing-key /secure/pairshell-release --signing-public-key /secure/pairshell-release.pub
-python scripts/release_signing.py sign bin/release-1.2.0 --private-key /secure/pairshell-release --public-key /secure/pairshell-release.pub
+python scripts/assemble-release.py --version 1.1.3 --signing-key /secure/pairshell-release --signing-public-key /secure/pairshell-release.pub
+python scripts/release_signing.py sign dist --private-key /secure/pairshell-release --public-key /secure/pairshell-release.pub
 ```
 
 把安装包、`SHA256SUMS.txt` 和 `SHA256SUMS.txt.sig` 一起发布。本地开发可以组装未签名包。正式发布应先用通过独立渠道确认的公钥进行完整校验。签名后重新打包或修改任何发行文件，都应重新生成清单并重新签名。
@@ -20,7 +20,7 @@ python scripts/release_signing.py sign bin/release-1.2.0 --private-key /secure/p
 将安装包、清单和签名下载到同一个目录，把事先信任的发布公钥保存在另一个位置。从已信任的源码副本运行验证脚本。先确认下载的是你预期的版本，再运行以下任一命令。收到一个安装包时，使用 `--artifact` 指定它的文件名。收到整个正式发布目录时，省略该选项。
 
 ```text
-python scripts/release_signing.py verify downloads --public-key /trusted/pairshell-release.pub --artifact PairShell-1.2.0-Windows-x64.zip
+python scripts/release_signing.py verify downloads --public-key /trusted/pairshell-release.pub --artifact PairShell-1.1.3-Windows-x64.zip
 python scripts/release_signing.py verify downloads --public-key /trusted/pairshell-release.pub
 ```
 

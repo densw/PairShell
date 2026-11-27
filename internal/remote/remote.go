@@ -29,6 +29,7 @@ import (
 )
 
 type coordinator struct {
+	clock                 pairing.ServerClock
 	route                 atomic.Pointer[routeSource]
 	useTailcat            bool
 	base, token, id, role string
@@ -78,6 +79,7 @@ func (c *coordinator) request(ctx context.Context, path string, body []byte, out
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Content-Type", "application/json")
+	sent := time.Now()
 	res, e := c.client.Do(req)
 	if e != nil {
 		return errors.New("coordination connection failed")
@@ -86,11 +88,19 @@ func (c *coordinator) request(ctx context.Context, path string, body []byte, out
 	if res.StatusCode != 200 {
 		return fmt.Errorf("coordination rejected (%d)", res.StatusCode)
 	}
+	c.clock.ObserveResponse(res.Header, sent)
 	if out == nil {
 		_, e = io.Copy(io.Discard, io.LimitReader(res.Body, 262145))
 		return e
 	}
-	return json.NewDecoder(io.LimitReader(res.Body, 262145)).Decode(out)
+	err := json.NewDecoder(io.LimitReader(res.Body, 262145)).Decode(out)
+	if reply, ok := out.(*leaseReply); ok && err == nil {
+		reply.serverTime, _ = pairing.ResponseTime(res.Header)
+		if precise, preciseErr := time.Parse(time.RFC3339Nano, res.Header.Get("X-PairShell-Time")); preciseErr != nil || precise.IsZero() {
+			reply.uncertainty = time.Second
+		}
+	}
+	return err
 }
 func Create(ctx context.Context, base, deploy string, client *http.Client) (*Merchant, error) {
 	i, key, e := pairing.NewInvite(base, 10*time.Minute)
@@ -116,9 +126,14 @@ func Create(ctx context.Context, base, deploy string, client *http.Client) (*Mer
 	if e != nil {
 		return nil, e
 	}
-	if creds.ExpiresAt.Unix() < i.Expires {
-		i.Expires = creds.ExpiresAt.Unix()
+	expires := creds.ExpiresAt
+	if limit := c.clock.Now().Add(10 * time.Minute); expires.After(limit) {
+		expires = limit
 	}
+	if !expires.After(c.clock.Now()) {
+		return nil, errors.New("INVITE_EXPIRED")
+	}
+	i.Expires = expires.Unix()
 	c.token = creds.CreatorToken
 	c.auth = pairing.SignalAuthenticator{Secret: i.Secret, SessionID: i.SessionID, PeerRole: "customer", Epoch: 1}
 	return &Merchant{i, key, c}, nil
@@ -226,7 +241,7 @@ func (c *coordinator) handshake(ctx context.Context, i pairing.Invite, key ed255
 	if e = c.receive(ctx, "proof", &other); e != nil {
 		return tr, e
 	}
-	if e = pairing.Verify(i.Secret, c.auth.PeerRole, tr, other); e != nil {
+	if e = pairing.VerifyAt(i.Secret, c.auth.PeerRole, tr, other, c.clock.Now()); e != nil {
 		return tr, e
 	}
 	return tr, nil
@@ -253,39 +268,50 @@ func (c *coordinator) servers(ctx context.Context) []webrtc.ICEServer {
 func (c *coordinator) lease(ctx context.Context, stop context.CancelFunc, gate *session.Gate) {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
-	last := time.Now()
+	until := time.Now().Add(30 * time.Second)
+	revoke := func() {
+		if gate != nil {
+			gate.End()
+		}
+		stop()
+	}
 	for {
 		if ctx.Err() != nil {
 			return
 		}
-		var reply struct {
-			Expires time.Time `json:"expires_at"`
-		}
-		e := c.call(ctx, "/v1/lease", nil, &reply)
-		if e == nil {
-			last = time.Now()
-			if gate != nil {
-				if gate.RenewLease(reply.Expires) != nil {
-					stop()
-					return
-				}
-			}
-		}
-		if time.Since(last) >= 30*time.Second {
-			if gate != nil {
-				gate.End()
-			}
-			stop()
+		if !time.Now().Before(until) {
+			revoke()
 			return
 		}
-		if gate != nil && gate.Snapshot().State == "ENDED" {
-			stop()
+		var reply leaseReply
+		sent := time.Now()
+		requestCtx, cancel := context.WithTimeout(ctx, min(10*time.Second, time.Until(until)))
+		err := c.call(requestCtx, "/v1/lease", nil, &reply)
+		cancel()
+		if ctx.Err() != nil {
 			return
 		}
+		if err == nil {
+			until, err = reply.deadline(sent)
+			if err != nil || gate != nil && gate.RenewLease(until) != nil {
+				revoke()
+				return
+			}
+		}
+		if !time.Now().Before(until) || gate != nil && gate.Snapshot().State == "ENDED" {
+			revoke()
+			return
+		}
+		expiry := time.NewTimer(time.Until(until))
 		select {
 		case <-ctx.Done():
+			expiry.Stop()
 			return
 		case <-ticker.C:
+			expiry.Stop()
+		case <-expiry.C:
+			revoke()
+			return
 		}
 	}
 }
@@ -384,7 +410,7 @@ func (m *Merchant) Connect(ctx context.Context, verify func(pairing.Transcript, 
 	return client, e
 }
 func ServeCustomer(ctx context.Context, raw string, client *http.Client, handler sshbridge.Handler, consent func(pairing.Transcript, string) (*session.Gate, error)) error {
-	i, e := pairing.ParseInvite(raw, time.Now())
+	i, e := pairing.DecodeInvite(raw)
 	if e != nil {
 		return e
 	}
@@ -407,6 +433,9 @@ func ServeCustomer(ctx context.Context, raw string, client *http.Client, handler
 		return e
 	}
 	defer c.end()
+	if _, e = pairing.ParseInvite(raw, c.clock.Now()); e != nil {
+		return e
+	}
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
 	leaseCtx, stopInitialLease := context.WithCancel(ctx)

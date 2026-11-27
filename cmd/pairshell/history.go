@@ -40,7 +40,7 @@ func (d *desktopServer) serveHistory(w http.ResponseWriter, r *http.Request) {
 				json.NewEncoder(w).Encode([]localui.Event{})
 				return
 			}
-			events, e := localui.ReadAuditEvents(path, after)
+			events, e := localui.ReadPlainAuditEvents(path, after)
 			if e != nil {
 				http.Error(w, "读取记录失败", 500)
 				return

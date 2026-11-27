@@ -1,9 +1,9 @@
 param([switch]$CompileOnly,[string]$Filter='')
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent
-$go=Join-Path $repo '.tools/go/bin/go.exe'
-if(-not(Test-Path -LiteralPath $go)){$go='go'}
-$output=Join-Path $repo '.tools/test-bin'
+. "$PSScriptRoot/build-tools.ps1"
+$go=Find-PairShellTool 'go' @('go/bin/go.exe')
+$output=Join-Path (Get-PairShellBuildWork) 'test-bin'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $packages=& $go -C $repo list ./...
 if($LASTEXITCODE -ne 0){throw 'Could not list test packages'}

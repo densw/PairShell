@@ -6,11 +6,13 @@ $package=Join-Path $repo "bin/PairShell-$Version-Windows-x64"
 foreach($name in @('PairShell.Customer.exe','PairShell.Merchant.exe','runtime/PairShell.exe','runtime/PairShellBackend.exe')){
  if(-not(Test-Path -LiteralPath (Join-Path $package $name))){throw "Missing portable component: $name"}
 }
-$compiler=Get-ChildItem -LiteralPath (Join-Path $repo '.tools/nsis') -Filter makensis.exe -Recurse | Select-Object -First 1 -ExpandProperty FullName
-$seven=Join-Path $repo '.tools/release-0.10.1/mac/7zip-full/7z.exe'
+. "$PSScriptRoot/build-tools.ps1"
+$compiler=Find-PairShellTool 'makensis' @('nsis/nsis-3.13/makensis.exe')
+$seven=Find-PairShellTool '7z' @('7zip/7z.exe')
 if(-not $compiler -or -not(Test-Path -LiteralPath $seven)){throw 'NSIS and 7-Zip build tools are required'}
-$stage=Join-Path $repo ('.tools/portable-uninstaller-'+[guid]::NewGuid().ToString('N'))
+$stage=Join-Path (Get-PairShellBuildWork) ('portable-uninstaller-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $stage | Out-Null
+try {
 [IO.File]::WriteAllText((Join-Path $package 'runtime/.pairshell-portable'),'PairShell portable',[Text.UTF8Encoding]::new($false))
 $deletes=[Collections.Generic.List[string]]::new()
 foreach($file in Get-ChildItem -LiteralPath $package -Recurse -Force -File | Where-Object Name -ne 'Uninstall.exe'){
@@ -31,3 +33,4 @@ if($LASTEXITCODE -ne 0){throw 'Portable uninstaller compilation failed'}
 if($LASTEXITCODE -ne 0){throw 'Uninstaller extraction failed'}
 Copy-Item -LiteralPath (Join-Path $stage 'Uninstall.exe') -Destination (Join-Path $package 'Uninstall.exe') -Force
 Get-FileHash -LiteralPath (Join-Path $package 'Uninstall.exe') -Algorithm SHA256
+} finally { Remove-PairShellBuildStage $stage }

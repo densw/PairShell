@@ -63,6 +63,7 @@ type Result struct {
 type endpoint struct {
 	base, id, locator, token string
 	client                   *http.Client
+	clock                    pairing.ServerClock
 }
 type response struct {
 	Permit       string `json:"create_permit"`
@@ -117,11 +118,13 @@ func (e *endpoint) call(ctx context.Context, path string, message []byte) (respo
 	}
 	r.Header.Set("Authorization", "Bearer "+e.token)
 	r.Header.Set("Content-Type", "application/json")
+	sent := time.Now()
 	res, err := e.client.Do(r)
 	if err != nil {
 		return response{}, &RequestError{Operation: path}
 	}
 	defer res.Body.Close()
+	e.clock.ObserveResponse(res.Header, sent)
 	if res.StatusCode != http.StatusOK {
 		return response{}, &RequestError{Operation: path, Status: res.StatusCode}
 	}
@@ -227,7 +230,7 @@ func (e *endpoint) open(key, data []byte) (string, error) {
 	if err != nil {
 		return "", ErrCode
 	}
-	i, err := pairing.ParseInvite(string(text), time.Now())
+	i, err := pairing.ParseInvite(string(text), e.clock.Now())
 	if err != nil || i.Base != e.base {
 		return "", ErrCode
 	}

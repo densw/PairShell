@@ -304,7 +304,7 @@ func customerSession(ctx context.Context, invite, root, logs string, ready func(
 		ui.ReturnURL = returnURL
 		ui.VerificationCode = code
 		ui.ReadEvents = func(c uint64) ([]localui.Event, error) {
-			return localui.ReadAuditEvents(filepath.Join(dir, "events.jsonl"), c)
+			return localui.ReadPlainAuditEvents(filepath.Join(dir, "events.jsonl"), c)
 		}
 		ln, e := net.Listen("tcp", "127.0.0.1:0")
 		if e != nil {
