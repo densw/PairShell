@@ -7,15 +7,15 @@ PairShell 让求助方、协助方与协调服务各自处在清晰的安全边�
 > PairShell 使用求助方当前系统账号的权限。请只授权你信任的协助方；如果以管理员身份运行，远程协助也会拥有相应权限。
 
 <p align="center">
-  <a href="https://github.com/densw/PairShell/releases/download/v1.1.2/PairShell-1.1.2-Windows-x64-Customer-Setup.exe">Windows 求助方安装包</a> ·
-  <a href="https://github.com/densw/PairShell/releases/download/v1.1.2/PairShell-1.1.2-Windows-x64-Merchant-Setup.exe">Windows 协助方安装包</a> ·
-  <a href="https://github.com/densw/PairShell/releases/download/v1.1.2/PairShell-1.1.2-macOS-universal.dmg">macOS 通用版 DMG</a> ·
+  <a href="https://github.com/densw/PairShell/releases/download/v1.1.3/PairShell-1.1.3-Windows-x64-Customer-Setup.exe">Windows 求助方安装包</a> ·
+  <a href="https://github.com/densw/PairShell/releases/download/v1.1.3/PairShell-1.1.3-Windows-x64-Merchant-Setup.exe">Windows 协助方安装包</a> ·
+  <a href="https://github.com/densw/PairShell/releases/download/v1.1.3/PairShell-1.1.3-macOS-universal.dmg">macOS 通用版 DMG</a> ·
   <a href="docs/deployment.md">Self-hosted</a>
 </p>
 
 🌐 官网：[pairshell.top](https://pairshell.top)（正在建设中）
 
-本次 v1.1.2 更新 Windows 和 macOS 客户端安装包，不更新协调服务。既有服务无需升级；Linux CLI 与服务端包继续使用 [v1.1.1 Release](https://github.com/densw/PairShell/releases/tag/v1.1.1)。自建服务入口和网络要求见[部署说明](docs/deployment.md)。
+本次 v1.1.3 更新 Windows、macOS 及 Linux 全系安装包和 CLI／服务端包。Linux 提供 amd64 与 arm64 架构。自建服务入口和网络要求见[部署说明](docs/deployment.md)。
 
 ## 🎬 双端协作演示
 
@@ -56,7 +56,7 @@ sequenceDiagram
 
 ## 快速开始
 
-1. 从 [v1.1.2 Release](https://github.com/densw/PairShell/releases/tag/v1.1.2) 下载 Windows 求助方／协助方安装包或 macOS Universal DMG。Linux CLI 与服务端继续使用 [v1.1.1 Release](https://github.com/densw/PairShell/releases/tag/v1.1.1)。
+1. 从 [v1.1.3 Release](https://github.com/densw/PairShell/releases/tag/v1.1.3) 下载 Windows 求助方／协助方安装包或 macOS Universal DMG。Linux CLI 与服务端也可从同一 Release 下载。
 2. 按[部署说明](docs/deployment.md)运行协调服务；双方在 PairShell 的连接设置中填写同一 HTTPS 服务地址。
 3. 求助方打开客户端生成一次性配对码，协助方输入该码。双方通过已有可信渠道互相读出并核对完整校验码。
 4. 求助方确认协助方身份、检查权限并授权。连接后求助方可只读观看协助方的终端操作，并随时暂停或结束会话。
@@ -77,7 +77,7 @@ PairShell 的三方分别是**求助方、协助方和协调服务运营者**。
 
 审计记录保存在本机，可执行校验与回放；客户端尚未完成周期性远端见证闭环。安装包附有 SHA-256 清单和分离签名。验证前应通过独立渠道确认发布公钥或其指纹，不能只信任同一 Release 中随包下载的公钥。详细威胁模型见[三方安全协助说明](docs/trust.md)，签名步骤见[发布验证说明](docs/release-signing.md)。
 
-**项目仍处于开发阶段，协议尚未通过独立安全审查。** v1.1.2 尚未完成真实 Windows 安装／卸载和 macOS 真机启动／Gatekeeper 验收；Windows 安装器没有 Authenticode 签名，macOS App 使用 ad-hoc 签名且未公证。详情见[1.1.2 发布说明](docs/RELEASE-1.1.2.md)及[实施台账](docs/IMPLEMENTATION.md)。
+**项目仍处于开发阶段，协议尚未通过独立安全审查。** v1.1.3 尚未完成真实 Windows 安装／卸载和 macOS Gatekeeper 验收；Windows 安装器没有 Authenticode 签名，macOS App 使用 ad-hoc 签名且未公证。详情见[1.1.3 发布说明](docs/RELEASE-1.1.3.md)及[实施台账](docs/IMPLEMENTATION.md)。
 
 ## 部署说明
 
@@ -105,4 +105,6 @@ pairshell config --server https://your-relay.example
 - [功能清单](docs/FEATURES-AND-UX.md) · [实施状态和未完成事项](docs/IMPLEMENTATION.md)
 - [贡献指南](CONTRIBUTING.md)
 
-开发需要 Go 1.26 或以上。客户端运行时无需 Go、Node 或 Python。项目尚未确定自身开源许可证；提交贡献前请先阅读[贡献指南](CONTRIBUTING.md)。
+开发需要 Go 1.27.4 或以上。客户端运行时无需 Go、Node 或 Python。项目尚未确定自身开源许可证；提交贡献前请先阅读[贡献指南](CONTRIBUTING.md)。
+
+可选 tailcat 传输：在两端启动前设置 `PAIRSHELL_TRANSPORT=tailcat`，通过 WireGuard / magicsock 持续尝试 UDP 直连，并使用 DERP 引导和中继。任一端未启用时使用现有 WebRTC。可通过 `PAIRSHELL_DERP_MAP_URL` 配置自建 DERP；部署方式、密钥保护和验证范围见 [传输文档](docs/transport.md#tailcat-backend)。

@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-version=${PAIRSHELL_VERSION:-1.0.0}
+version=${PAIRSHELL_VERSION:-1.1.3}
 # Inputs: arm64 Go executable, x86_64 Go executable, Swift source, output DMG.
 test "$#" -eq 4
 test ! -e "$4"
@@ -26,7 +26,7 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 </dict></plist>
 PLIST
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" "$app/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 100' "$app/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $(printf '%s' "$version" | tr -d .)" "$app/Contents/Info.plist"
 chmod 755 "$app/Contents/MacOS/PairShellCustomer" "$app/Contents/Helpers/PairShellBackend"
 codesign --force --sign - --timestamp=none "$app/Contents/Helpers/PairShellBackend"
 codesign --force --sign - --timestamp=none "$app"

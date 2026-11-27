@@ -140,7 +140,7 @@ func (c *coordinator) candidatePaths(ctx context.Context, stop context.CancelFun
 		closeCandidates(peers)
 		return nil, nil, e
 	}
-	c.route.Store(shared)
+	c.route.Store(&routeSource{shared})
 	go transport.MaintainCandidates(ctx, shared, peers, initial, stop)
 	return shared, peers, nil
 }
@@ -155,7 +155,7 @@ func closeCandidates(peers []*transport.Peer) {
 // RouteStatus reports the local sending path; the opposite direction can choose independently.
 func (m *Merchant) RouteStatus() transport.RouteStatus {
 	if c := m.c.route.Load(); c != nil {
-		return c.RouteStatus()
+		return c.reporter.RouteStatus()
 	}
 	return transport.RouteStatus{Selected: "connecting"}
 }

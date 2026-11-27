@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import time
 
-p=argparse.ArgumentParser();p.add_argument('--version',default='1.1.2');args=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--version',default='1.1.3');args=p.parse_args()
 root=Path(__file__).resolve().parents[1]
 package=root/f'bin/PairShell-{args.version}-Windows-x64'
 tools=(root/'.tools').resolve()

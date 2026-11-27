@@ -13,7 +13,7 @@ from release_signing import MANIFEST, sha256_file as sha, sign_release
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--version', default='1.1.2')
+    p.add_argument('--version', default='1.1.3')
     p.add_argument('--signing-key', type=Path)
     p.add_argument('--signing-public-key', type=Path)
     args = p.parse_args()

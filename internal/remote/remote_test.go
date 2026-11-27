@@ -26,7 +26,10 @@ func (handler) Run(cmd string, _ io.Reader, out, err io.Writer) (int, error) {
 func (handler) Shell(io.Reader, io.Writer, uint32, uint32, <-chan sshbridge.Size) (int, error) {
 	return 0, nil
 }
-func TestPairPionSSH(t *testing.T) {
+func TestPairPionSSH(t *testing.T) { testPairSSH(t, nil) }
+
+func testPairSSH(t *testing.T, after func(*Merchant)) {
+	t.Helper()
 	srv := httptest.NewTLSServer(server.New(server.Config{CreateToken: "deploy", RoomTTL: time.Minute}))
 	defer srv.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -44,6 +47,14 @@ func TestPairPionSSH(t *testing.T) {
 			return g, g.Consent(session.Capabilities{Terminal: true, Tasks: true}, false)
 		})
 	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(3 * time.Second):
+			t.Error("customer did not stop after cancellation")
+		}
+	})
 	client, e := m.Connect(ctx, func(_ pairing.Transcript, code string) error {
 		select {
 		case peerCode := <-customerCode:
@@ -66,6 +77,18 @@ func TestPairPionSSH(t *testing.T) {
 	out, e := s.Output("hello")
 	if e != nil || string(out) != "remote:hello" {
 		t.Fatalf("%q %v", out, e)
+	}
+	if after != nil {
+		after(m)
+		next, err := client.NewSession()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer next.Close()
+		output, err := next.Output("after-direct")
+		if err != nil || string(output) != "remote:after-direct" {
+			t.Fatalf("after path assertion: %q %v", output, err)
+		}
 	}
 }
 

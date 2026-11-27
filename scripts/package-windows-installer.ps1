@@ -1,4 +1,4 @@
-param([string]$Version='1.1.2',[ValidateSet('Customer','Merchant','Both')][string]$Role='Both')
+param([string]$Version='1.1.3',[ValidateSet('Customer','Merchant','Both')][string]$Role='Both')
 $ErrorActionPreference='Stop'
 if($Version -notmatch '^\d+\.\d+\.\d+$'){throw 'Invalid version'}
 $repo=Split-Path $PSScriptRoot -Parent

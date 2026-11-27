@@ -8,7 +8,7 @@ import tempfile
 import zipfile
 from verify_macho_signature import verify_binary
 
-p=argparse.ArgumentParser();p.add_argument('--version',default='1.1.2');args=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--version',default='1.1.3');args=p.parse_args()
 root=Path(__file__).resolve().parents[1]
 seven=root/'.tools/release-0.10.1/mac/7zip-full/7z.exe'
 dmg=root/f'bin/PairShell-{args.version}-macOS-universal.dmg'

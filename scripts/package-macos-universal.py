@@ -30,7 +30,7 @@ def fat_binary(paths):
     return result
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--version',default='1.1.2');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--version',default='1.1.3');args=parser.parse_args()
     if not re.fullmatch(r'\d+\.\d+\.\d+', args.version):
         parser.error('Version must use major.minor.patch')
     repo=Path(__file__).resolve().parents[1]

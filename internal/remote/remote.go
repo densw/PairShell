@@ -16,12 +16,12 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"pairshell/internal/config"
 	"pairshell/internal/pairing"
 	"pairshell/internal/server"
 	"pairshell/internal/session"
 	"pairshell/internal/sshbridge"
-	"pairshell/internal/transport"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -29,7 +29,8 @@ import (
 )
 
 type coordinator struct {
-	route                 atomic.Pointer[transport.Conn]
+	route                 atomic.Pointer[routeSource]
+	useTailcat            bool
 	base, token, id, role string
 	client                *http.Client
 	secret                []byte
@@ -46,6 +47,7 @@ type hello struct {
 	Key                 ed25519.PublicKey `json:"key"`
 	Challenge           []byte            `json:"challenge"`
 	VerificationVersion int               `json:"verification_version"`
+	Transport           string            `json:"transport,omitempty"`
 }
 
 const verificationVersion = 2
@@ -178,7 +180,14 @@ func (c *coordinator) handshake(ctx context.Context, i pairing.Invite, key ed255
 	if _, e := rand.Read(challenge); e != nil {
 		return tr, e
 	}
-	local := hello{key.Public().(ed25519.PublicKey), challenge, verificationVersion}
+	mode := os.Getenv("PAIRSHELL_TRANSPORT")
+	if mode != "" && mode != "webrtc" && mode != "tailcat" {
+		return tr, errors.New("invalid PAIRSHELL_TRANSPORT")
+	}
+	local := hello{Key: key.Public().(ed25519.PublicKey), Challenge: challenge, VerificationVersion: verificationVersion}
+	if mode == "tailcat" {
+		local.Transport = "tailcat-v1"
+	}
 	if e := c.send(ctx, "hello", local); e != nil {
 		return tr, e
 	}
@@ -186,6 +195,7 @@ func (c *coordinator) handshake(ctx context.Context, i pairing.Invite, key ed255
 	if e := c.receive(ctx, "hello", &peer); e != nil {
 		return tr, e
 	}
+	c.useTailcat = local.Transport == "tailcat-v1" && peer.Transport == "tailcat-v1"
 	if peer.VerificationVersion != verificationVersion {
 		return tr, errVerificationVersion
 	}
@@ -336,7 +346,7 @@ func (m *Merchant) ConnectStream(ctx context.Context, verify func(pairing.Transc
 	if e = m.c.awaitReady(ctx); e != nil {
 		return nil, nil, nil, e
 	}
-	conn, peers, e := m.c.candidatePaths(ctx, stop)
+	conn, cleanup, e := m.c.openTransport(ctx, stop)
 	if e != nil {
 		return nil, nil, nil, e
 	}
@@ -344,12 +354,12 @@ func (m *Merchant) ConnectStream(ctx context.Context, verify func(pairing.Transc
 	host, _ := ssh.NewPublicKey(tr.CustomerKey)
 	go func() {
 		<-ctx.Done()
-		conn.GracefulClose()
-		closeCandidates(peers)
+		closeStream(conn)
+		cleanup()
 		m.c.end()
 	}()
 	connected = true
-	return &link{Conn: conn, close: func() { stop(); closeCandidates(peers) }}, identity, host, nil
+	return &link{Conn: conn, close: func() { stop(); cleanup() }}, identity, host, nil
 }
 
 type link struct {
@@ -358,14 +368,9 @@ type link struct {
 }
 
 func (l *link) Close() error {
-	var e error
-	if c, ok := l.Conn.(*transport.Conn); ok {
-		e = c.GracefulClose()
-	} else {
-		e = l.Conn.Close()
-	}
+	err := closeStream(l.Conn)
 	l.close()
-	return e
+	return err
 }
 func (m *Merchant) Connect(ctx context.Context, verify func(pairing.Transcript, string) error) (*ssh.Client, error) {
 	conn, key, host, e := m.ConnectStream(ctx, verify)
@@ -448,13 +453,13 @@ func ServeCustomer(ctx context.Context, raw string, client *http.Client, handler
 	if e = c.awaitReady(ctx); e != nil {
 		return e
 	}
-	conn, peers, e := c.candidatePaths(ctx, stop)
+	conn, cleanup, e := c.openTransport(ctx, stop)
 	if e != nil {
 		return e
 	}
-	defer closeCandidates(peers)
+	defer cleanup()
 	defer conn.Close()
-	go func() { <-ctx.Done(); conn.GracefulClose(); closeCandidates(peers) }()
+	go func() { <-ctx.Done(); closeStream(conn); cleanup() }()
 	host, _ := ssh.NewSignerFromKey(key)
 	merchant, _ := ssh.NewPublicKey(i.MerchantKey)
 	return sshbridge.Serve(conn, host, merchant, handler)

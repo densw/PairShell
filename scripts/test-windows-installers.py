@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import zipfile
 
-parser=argparse.ArgumentParser();parser.add_argument('--version',default='1.1.2');args=parser.parse_args()
+parser=argparse.ArgumentParser();parser.add_argument('--version',default='1.1.3');args=parser.parse_args()
 root=Path(__file__).resolve().parents[1]
 seven=root/'.tools/release-0.10.1/mac/7zip-full/7z.exe'
 backend=root/f'bin/PairShell-{args.version}-Windows-x64/runtime/PairShellBackend.exe'
